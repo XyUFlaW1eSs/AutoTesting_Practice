@@ -1,0 +1,89 @@
+{
+  "Register": {
+    "TC_AUTH_REG_001": {
+      "payload": {
+        "userName": "testuser_auto_01",
+        "email": "testuser01@automation.com",
+        "password": "SecurePassword123!"
+      },
+      "expected_status": 200
+    },
+    "TC_AUTH_REG_002": {
+      "payload": {
+        "userName": "testuser_auto_02",
+        "password": "SecurePassword123!"
+      },
+      "expected_status": 400
+    },
+    "TC_AUTH_REG_003": {
+      "payload": {
+        "userName": "",
+        "email": "",
+        "password": ""
+      },
+      "expected_status": 400
+    }
+  },
+  "Login": {
+    "TC_AUTH_LOG_001": {
+      "payload": {
+        "identity": "testuser_auto_01",
+        "password": "SecurePassword123!"
+      },
+      "expected_status": 200
+    },
+    "TC_AUTH_LOG_002": {
+      "payload": {
+        "identity": "testuser_auto_01",
+        "password": "WrongPassword456"
+      },
+      "expected_status": 401
+    },
+    "TC_AUTH_LOG_003": {
+      "payload": {
+        "identity": "ghost_identity_not_exist",
+        "password": "SecurePassword123!"
+      },
+      "expected_status": 401
+    },
+    "TC_AUTH_LOG_004": {
+      "payload": {},
+      "expected_status": 400
+    }
+  },
+  "Refresh": {
+    "TC_AUTH_REF_001": {
+      "payload": {
+        "userId": "123e4567-e89b-12d3-a456-426614174000",
+        "refreshToken": "valid_refresh_token_string_here"
+      },
+      "expected_status": 200
+    },
+    "TC_AUTH_REF_002": {
+      "payload": {
+        "userId": "123e4567-e89b-12d3-a456-426614174000",
+        "refreshToken": "invalid_or_expired_refresh_token"
+      },
+      "expected_status": 401
+    },
+    "TC_AUTH_REF_003": {
+      "payload": {
+        "userId": "invalid-uuid-format-string",
+        "refreshToken": "some_refresh_token"
+      },
+      "expected_status": 400
+    }
+  },
+  "AuthHeaders": {
+    "TC_AUTH_ME_002": {
+      "headers": {},
+      "expected_status": 401
+    },
+    "TC_AUTH_ME_003": {
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_payload.invalid_signature"
+      },
+      "expected_status": 401
+    }
+  }
+}
