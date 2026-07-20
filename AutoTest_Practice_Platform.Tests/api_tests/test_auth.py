@@ -61,6 +61,7 @@ class TestAuthAPI:
   # ----------------------------------------
   # 场景 1: 用户注册 (Register)
   # ----------------------------------------
+  @pytest.mark.order(1)
   @allure.story("用户注册接口")
   @pytest.mark.parametrize("case_id, case_data", load_test_data("Register"))
   def test_register(self, case_id, case_data):
@@ -79,6 +80,7 @@ class TestAuthAPI:
   # ----------------------------------------
   # 场景 2: 用户登录 (Login)
   # ----------------------------------------
+  @pytest.mark.order(2)
   @allure.story("用户登录接口")
   @pytest.mark.parametrize("case_id, case_data", load_test_data("Login"))
   def test_login(self, case_id, case_data):
@@ -102,6 +104,7 @@ class TestAuthAPI:
   # ----------------------------------------
   # 场景 3: 刷新令牌 (Refresh Token)
   # ----------------------------------------
+  @pytest.mark.order(3)
   @allure.story("刷新 Token 接口")
   @pytest.mark.parametrize("case_id, case_data", load_test_data("Refresh"))
   def test_refresh_token(self, case_id, case_data, real_auth_context):
@@ -124,6 +127,7 @@ class TestAuthAPI:
   # ----------------------------------------
   # 场景 4: 获取当前用户信息 (GetMe)
   # ----------------------------------------
+  @pytest.mark.order(4)
   @allure.story("获取当前用户信息接口")
   @pytest.mark.parametrize("case_id, case_data", load_test_data("AuthHeaders"))
   def test_get_me_exceptions(self, case_id, case_data):
@@ -159,6 +163,7 @@ class TestAuthAPI:
   # ----------------------------------------
   # 场景 5: 用户注销 (Logout)
   # ----------------------------------------
+  @pytest.mark.order(5)
   @allure.story("用户注销接口")
   def test_logout(self, real_auth_context):
     allure.dynamic.title("注销测试 - 正常登出系统")
