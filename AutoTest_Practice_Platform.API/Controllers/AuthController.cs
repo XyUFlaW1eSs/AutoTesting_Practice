@@ -22,8 +22,18 @@ public sealed class AuthController(AuthService auth, AppDbContext db, TokenBlack
         {
             return BadRequest(new { message = "Username, email, and password are required." });
         }
-        var user = await auth.RegisterAsync(request.UserName, request.Email, request.Password);
-        var login = await auth.LoginAsync(request.Email, request.Password);
+        var userResult = await auth.RegisterAsync(request.UserName, request.Email, request.Password);
+        if (!userResult.IsSuccess || userResult.Data is null)
+        {
+            //返回401代码，和错误消息
+            return Unauthorized(new { message = userResult.ErrorMessage });
+        }
+        var loginResult = await auth.LoginAsync(request.Email, request.Password);
+        if (!loginResult.IsSuccess) {
+            return Unauthorized(new { message = loginResult.ErrorMessage });
+        }
+        var user = userResult.Data;
+        var login = loginResult.Data;
         return Ok(new AuthResponse(user.Id, user.UserName, user.Email, user.Role, login.Token, login.RefreshToken, login.ExpiresAt));
     }
 
@@ -31,7 +41,12 @@ public sealed class AuthController(AuthService auth, AppDbContext db, TokenBlack
     [EnableRateLimiting("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
-        var login = await auth.LoginAsync(request.Identity, request.Password);
+        var loginResult = await auth.LoginAsync(request.Identity, request.Password);
+        if (!loginResult.IsSuccess)
+        {
+            return Unauthorized(new { message = loginResult.ErrorMessage });
+        }
+        var login = loginResult.Data;
         return Ok(new AuthResponse(login.User.Id, login.User.UserName, login.User.Email, login.User.Role, login.Token, login.RefreshToken, login.ExpiresAt));
     }
 
