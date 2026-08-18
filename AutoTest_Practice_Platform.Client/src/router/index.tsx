@@ -7,6 +7,7 @@ import { FileManagement } from '../pages/FileManagement';
 import { Register } from '../pages/Register';
 import { ReportHistory } from '../pages/ReportHistory';
 import { ResourceList } from '../pages/ResourceList';
+import { CardManagement } from '../pages/CardManagement';
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: 'resources',
         element: <ResourceList />,
+      },
+      {
+        path: 'cards',
+        element: <CardManagement />,
       },
     ],
   },

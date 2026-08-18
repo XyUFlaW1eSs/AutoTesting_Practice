@@ -161,3 +161,25 @@ export interface CreateResourceRequest {
 export interface UpdateResourceRequest extends Partial<CreateResourceRequest> {
   id?: string;
 }
+
+// ==========================================
+// 信用卡模块模型 (Cards)
+// ==========================================
+export interface CardResponse {
+  id?: string;
+  cardNumber?: string;
+  expiryDate?: string;
+  ccv?: string;
+  formattedInfo: string; // 后端拼接的格式化信息
+  createdAt?: string;
+  isDeleted: boolean; // 新增字段，标记卡片是否被逻辑删除
+}
+
+export interface CreateCardRequest {
+  cardNumber: string;
+  expiryDate: string;
+  ccv: string;
+  isDeleted: boolean;
+}
+
+export interface UpdateCardRequest extends CreateCardRequest {}

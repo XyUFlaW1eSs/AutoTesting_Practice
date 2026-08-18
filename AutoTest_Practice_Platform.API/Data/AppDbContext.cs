@@ -11,6 +11,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<FileAsset> Files => Set<FileAsset>();
     public DbSet<ReportRecord> Reports => Set<ReportRecord>();
 
+    public DbSet<CardItem> Cards => Set<CardItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity =>
@@ -42,6 +44,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.StoredFileName).HasMaxLength(260);
             entity.Property(x => x.ContentType).HasMaxLength(120);
             entity.Property(x => x.Category).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<CardItem>(entity =>
+        {
+            entity.Property(x => x.CardNumber).HasMaxLength(20);
+            entity.Property(x => x.ExpiryDate).HasMaxLength(10);
+            entity.Property(x => x.Ccv).HasMaxLength(4);
+            entity.Property(x => x.IsDeleted).HasDefaultValue(false);
         });
     }
 }

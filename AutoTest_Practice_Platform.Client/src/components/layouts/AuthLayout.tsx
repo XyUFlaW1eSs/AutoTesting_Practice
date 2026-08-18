@@ -56,7 +56,7 @@ export const AuthLayout = () => {
             <Link to="/tasks" className={`hover:text-white transition-colors ${isActive('/tasks')}`} data-testid="nav-tasks">任务管理</Link>
             <Link to="/files" className={`hover:text-white transition-colors ${isActive('/files')}`} data-testid="nav-files">文件管理</Link>
             <Link to="/reports" className={`hover:text-white transition-colors ${isActive('/reports')}`} data-testid="nav-reports">报表历史</Link>
-            <Link to="/resources" className={`hover:text-white transition-colors ${isActive('/resources')}`} data-testid="nav-resources">资源管理</Link>
+            <Link to="/cards" className={`hover:text-white transition-colors ${isActive('/cards')}`} data-testid="nav-cards">卡片管理</Link>
           </nav>
         </div>
         
