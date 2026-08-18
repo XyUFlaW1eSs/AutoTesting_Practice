@@ -66,7 +66,6 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials()
               .SetIsOriginAllowed(_ => true); // 动态允许所有 Origin，且兼容 Credentials
     });
 });

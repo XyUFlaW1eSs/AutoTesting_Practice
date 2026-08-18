@@ -1,9 +1,13 @@
 import axios from 'axios';
+import { useAuthStore } from '../store/useAuthStore';
+
 
 // 创建 axios 实例
 // 注意：这里的 baseURL 请替换为你本地真实运行的后端端口（比如 5289 或 7143）
+const currentHost = window.location.hostname; // 获取当前浏览器地址栏的 IP 或域名
+const apiPort = '5289'; // 后端固定的端口号
 const axiosClient = axios.create({
-  baseURL: 'http://127.0.0.1:5289', 
+  baseURL: import.meta.env.VITE_API_URL ||`http://${currentHost}:${apiPort}`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +20,7 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     // 从 localStorage 中读取我们登录后存入的 token
-    const token = localStorage.getItem('auth_token');
+    const token = useAuthStore.getState().token;
     if (token) {
       // 自动在所有请求头中附加 Bearer Token
       config.headers.Authorization = `Bearer ${token}`;
