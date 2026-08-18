@@ -3,7 +3,7 @@ import axios from 'axios';
 // 创建 axios 实例
 // 注意：这里的 baseURL 请替换为你本地真实运行的后端端口（比如 5289 或 7143）
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5289', 
+  baseURL: 'http://127.0.0.1:5289', 
   headers: {
     'Content-Type': 'application/json',
   },

@@ -52,14 +52,22 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddCors(options =>
 {
+    //options.AddPolicy("client", policy =>
+    //{
+    //    policy.AllowAnyHeader()
+    //        .AllowAnyMethod()
+    //        .AllowCredentials()
+    //        .SetIsOriginAllowed(origin => origin.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
+    //                                      || origin.StartsWith("http://127.0.0.1", StringComparison.OrdinalIgnoreCase)
+    //                                      || origin.StartsWith("tauri://", StringComparison.OrdinalIgnoreCase));
+    //});
+
     options.AddPolicy("client", policy =>
     {
         policy.AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials()
-            .SetIsOriginAllowed(origin => origin.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase)
-                                          || origin.StartsWith("http://127.0.0.1", StringComparison.OrdinalIgnoreCase)
-                                          || origin.StartsWith("tauri://", StringComparison.OrdinalIgnoreCase));
+              .AllowAnyMethod()
+              .AllowCredentials()
+              .SetIsOriginAllowed(_ => true); // 动态允许所有 Origin，且兼容 Credentials
     });
 });
 
