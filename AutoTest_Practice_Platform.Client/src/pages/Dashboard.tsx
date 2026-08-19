@@ -22,7 +22,7 @@ export const Dashboard = () => {
     try {
       setIsGenerating(true);
       toast.info('正在生成报表，这可能需要几秒钟...');
-      await taskService.generateReport('2026 Q3 自动化测试报告');
+      await taskService.generateReport({ title: '2026 Q3 自动化测试报告' });
       toast.success('报表生成完毕！');
     } catch (error) {
       toast.error('报表生成失败');

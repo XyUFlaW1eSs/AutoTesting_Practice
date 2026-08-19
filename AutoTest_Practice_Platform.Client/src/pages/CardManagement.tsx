@@ -8,7 +8,7 @@ import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
-import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit, Sliders } from 'lucide-react';
+import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
 
 export const CardManagement = () => {
   const [cards, setCards] = useState<CardResponse[]>([]);
