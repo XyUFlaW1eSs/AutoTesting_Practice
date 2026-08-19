@@ -2,7 +2,7 @@ import axiosClient from './axiosClient';
 import type { CardResponse, CreateCardRequest, UpdateCardRequest } from './types';
 
 export const cardService = {
-  getCards: async (params?: { cardNumber?: string; expiryDate?: string }): Promise<CardResponse[]> => {
+  getCards: async (params?: { cardNumber?: string; expiryDate?: string; isDeleted?: boolean | null }): Promise<CardResponse[]> => {
     const response = await axiosClient.get<CardResponse[]>('/api/cards', { params });
     return response.data;
   },

@@ -1,4 +1,6 @@
-﻿namespace AutoTest_Practice_Platform.API.Contracts
+﻿using System.Runtime.Serialization;
+
+namespace AutoTest_Practice_Platform.API.Contracts
 {
     public class CardContracts
     {
@@ -11,7 +13,9 @@
             string ExpiryDate,
             string Ccv,
             string FormattedInfo,
-            DateTimeOffset CreatedAt
+            bool IsDeleted,
+            string CreatedAt,
+            string? UpdatedAt
         )
         {
             public static CardResponse From(Models.CardItem card)
@@ -25,7 +29,10 @@
                     card.ExpiryDate,
                     card.Ccv,
                     formattedInfo,
-                    card.CreatedAt);
+                    card.IsDeleted,
+                    card.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss.ss"),
+                    card.UpdatedAt.HasValue ? card.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss.ss") : null
+                );
             }
         }
     }

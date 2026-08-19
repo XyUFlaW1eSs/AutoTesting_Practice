@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
-import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
+import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit, Sliders } from 'lucide-react';
 
 export const CardManagement = () => {
   const [cards, setCards] = useState<CardResponse[]>([]);
@@ -16,6 +17,7 @@ export const CardManagement = () => {
   // 搜索参数
   const [searchCardNumber, setSearchCardNumber] = useState('');
   const [searchExpiry, setSearchExpiry] = useState('');
+  const [filterDeleted, setFilterDeleted] = useState<boolean | null>(null); // null=全部, false=未删除, true=已删除
 
   // 弹窗与表单
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -38,6 +40,7 @@ export const CardManagement = () => {
       const params: any = {};
       if (searchCardNumber.trim()) params.cardNumber = searchCardNumber.trim();
       if (searchExpiry.trim()) params.expiryDate = searchExpiry.trim();
+      if (filterDeleted != null) params.isDeleted = filterDeleted;
       
       const data = await cardService.getCards(params);
       setCards(data || []);
@@ -48,11 +51,12 @@ export const CardManagement = () => {
     }
   };
 
-  useEffect(() => { fetchCards(); }, []);
+  useEffect(() => { fetchCards(); }, [filterDeleted]);
 
   const handleReset = () => {
     setSearchCardNumber('');
     setSearchExpiry('');
+    setFilterDeleted(null)
     setTimeout(() => fetchCards(), 0);
   };
 
@@ -66,7 +70,7 @@ export const CardManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('确定要删除这张卡片吗？(逻辑删除)')) return;
+    if (!window.confirm('确定要删除这张卡片吗？')) return;
     try {
       await cardService.deleteCard(id);
       toast.success('删除成功');
@@ -82,7 +86,7 @@ export const CardManagement = () => {
 
   const openEditDialog = (card: CardResponse) => {
     setEditingId(card.id!);
-    setFormData({ cardNumber: card.cardNumber || '', expiryDate: card.expiryDate || '', ccv: card.ccv || '', isDeleted: card.isDeleted || false });
+    setFormData({ cardNumber: card.cardNumber || '', expiryDate: card.expiryDate || '', ccv: card.ccv || '', isDeleted: card.isDeleted});
     setIsDialogOpen(true);
   };
 
@@ -119,6 +123,11 @@ export const CardManagement = () => {
       <div className="flex flex-wrap gap-4 items-center bg-zinc-900 p-4 border border-zinc-800 rounded-md">
         <Input placeholder="检索卡号片段..." value={searchCardNumber} onChange={e => setSearchCardNumber(e.target.value)} className="w-[220px] bg-zinc-800 border-zinc-700 text-zinc-100" />
         <Input placeholder="检索有效期 (如 12/26)" value={searchExpiry} onChange={e => setSearchExpiry(e.target.value)} className="w-[180px] bg-zinc-800 border-zinc-700 text-zinc-100" />
+        <div className="flex bg-zinc-800 p-1 rounded-md border border-zinc-700">
+          <button onClick={() => setFilterDeleted(null)} className={`px-4 py-1 text-sm rounded-sm transition-colors ${filterDeleted === null ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>全部</button>
+          <button onClick={() => setFilterDeleted(false)} className={`px-4 py-1 text-sm rounded-sm transition-colors ${filterDeleted === false ? 'bg-green-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>未删除</button>
+          <button onClick={() => setFilterDeleted(true)} className={`px-4 py-1 text-sm rounded-sm transition-colors ${filterDeleted === true ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>已删除</button>
+        </div>
         <Button onClick={fetchCards} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Search className="w-4 h-4 mr-2" /> 检索</Button>
         <Button onClick={handleReset} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 重置</Button>
         <Label className="text-zinc-400 text-sm ml-auto">共 {cards.length} 张卡片</Label>
@@ -132,6 +141,9 @@ export const CardManagement = () => {
               <TableHead className="text-zinc-400">卡号 (Card Number)</TableHead>
               <TableHead className="text-zinc-400">有效期 (EXP)</TableHead>
               <TableHead className="text-zinc-400">安全码 (CCV)</TableHead>
+              <TableHead className="text-zinc-400">状态</TableHead>
+              <TableHead className="text-zinc-400">创建时间</TableHead>
+              <TableHead className="text-zinc-400">更新时间</TableHead>
               <TableHead className="text-right text-zinc-400">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -142,12 +154,22 @@ export const CardManagement = () => {
                <TableRow><TableCell colSpan={4} className="text-center py-8 text-zinc-500">暂无卡片数据</TableCell></TableRow>
             ) : (
               cards.map(card => (
-                <TableRow key={card.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                <TableRow key={card.id} className={`border-zinc-800 transition-colors ${card.isDeleted ? 'bg-red-950/20 opacity-80 hover:bg-red-950/40' : 'hover:bg-zinc-800/50'}`}>
                   <TableCell className="text-zinc-200 font-mono flex items-center">
-                    <CreditCard className="w-4 h-4 mr-2 text-indigo-400" /> {card.cardNumber}
+                    <CreditCard className="w-4 h-4 mr-2 text-indigo-400 tabular-nums" />
+                    <span className={card.isDeleted ? 'line-through text-zinc-500' : ''}>{card.cardNumber}</span>
                   </TableCell>
                   <TableCell className="text-zinc-300">{card.expiryDate}</TableCell>
                   <TableCell className="text-zinc-300">***</TableCell> {/* 列表中对 CCV 进行脱敏展示 */}
+                  <TableCell>
+                    {/* 列表中的只读滑块状态 */}
+                    <div className="flex items-center gap-2">
+                       <Switch checked={card.isDeleted} disabled={true} />
+                       <span className={`text-xs ${card.isDeleted ? 'text-red-400' : 'text-green-400'}`}>{card.isDeleted ? '已废弃' : '活跃'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-zinc-300 tabular-nums">{card.createdAt}</TableCell>
+                  <TableCell className="text-zinc-300 tabular-nums">{card.updatedAt}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleCopy(card.formattedInfo)} className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800" title="一键复制">
                       <Copy className="w-4 h-4" />
@@ -184,6 +206,14 @@ export const CardManagement = () => {
                 <Label className="text-zinc-300">CCV</Label>
                 <Input value={formData.ccv} onChange={e => setFormData({...formData, ccv: e.target.value})} maxLength={4} className="bg-zinc-800 border-zinc-700 text-zinc-100" />
               </div>
+            </div>
+            <div className="flex items-center justify-between p-3 border border-zinc-700 rounded-md mt-2">
+               <Label className="text-zinc-300 cursor-pointer" onClick={() => setFormData({...formData, isDeleted: !formData.isDeleted})}>
+                 标记为已删除 (废弃)
+               </Label>
+               <Switch checked={formData.isDeleted}
+                onCheckedChange={(checked) => setFormData({...formData, isDeleted: checked})}
+                className="data-[state=checked]:bg-red-600"/>
             </div>
           </div>
           <DialogFooter>

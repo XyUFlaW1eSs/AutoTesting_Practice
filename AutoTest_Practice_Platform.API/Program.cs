@@ -69,6 +69,11 @@ builder.Services.AddCors(options =>
               .SetIsOriginAllowed(_ => true); // 动态允许所有 Origin，且兼容 Credentials
     });
 });
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+    options.ListenAnyIP(5289);
+});
 
 var app = builder.Build();
 

@@ -16,7 +16,7 @@ namespace AutoTest_Practice_Platform.API.Controllers
 
         // 1. 检索卡片 (支持根据卡号和有效期模糊检索)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CardResponse>>> GetAll([FromQuery] string? cardNumber, [FromQuery] string? expiryDate)
+        public async Task<ActionResult<IEnumerable<CardResponse>>> GetAll([FromQuery] string? cardNumber, [FromQuery] string? expiryDate, [FromQuery] bool? isDeleted)
         {
             var query = db.Cards.AsNoTracking().AsQueryable();
 
@@ -26,9 +26,26 @@ namespace AutoTest_Practice_Platform.API.Controllers
             if (!string.IsNullOrWhiteSpace(expiryDate))
                 query = query.Where(x => x.ExpiryDate.Contains(expiryDate));
 
-            var result = await query.OrderBy(x => x.CreatedAt)
-                                    .Select(x => CardResponse.From(x))
-                                    .ToListAsync();
+            if (isDeleted.HasValue)
+                query = query.Where(x => x.IsDeleted == isDeleted.Value);
+
+            // 先查出数据在内存中排序，避免复杂的三元表达式导致 EF 翻译 SQL 失败
+            var data = await query.ToListAsync();
+
+            var unDeletedResult = data
+                            .Where(x => !x.IsDeleted)
+                            .OrderBy(x => x.CreatedAt)
+                            .Select(x => CardResponse.From(x))
+                            .ToList();
+
+            var DeletedResult = data
+                            .Where(x => x.IsDeleted)
+                            .OrderBy(x => x.UpdatedAt)
+                            .Select(x => CardResponse.From(x))
+                            .ToList();
+
+            var result = unDeletedResult.Concat(DeletedResult).ToList();
+
             return Ok(result);
         }
 
@@ -40,7 +57,8 @@ namespace AutoTest_Practice_Platform.API.Controllers
             {
                 CardNumber = request.CardNumber,
                 ExpiryDate = request.ExpiryDate,
-                Ccv = request.Ccv
+                Ccv = request.Ccv,
+                IsDeleted = request.IsDeleted
             };
 
             db.Cards.Add(card);

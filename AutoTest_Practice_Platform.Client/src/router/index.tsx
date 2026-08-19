@@ -19,10 +19,6 @@ export const router = createBrowserRouter([
     element: <Register />,
   },
   {
-    path: 'cards',
-    element: <CardManagement />,
-  },
-  {
     // 根路径包裹上 AuthLayout 守卫
     path: '/',
     element: <AuthLayout />,

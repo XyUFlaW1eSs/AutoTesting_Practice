@@ -170,9 +170,10 @@ export interface CardResponse {
   cardNumber?: string;
   expiryDate?: string;
   ccv?: string;
-  formattedInfo: string; // 后端拼接的格式化信息
+  formattedInfo: string;
+  isDeleted: boolean;
   createdAt?: string;
-  isDeleted: boolean; // 新增字段，标记卡片是否被逻辑删除
+  updatedAt? :string;
 }
 
 export interface CreateCardRequest {
