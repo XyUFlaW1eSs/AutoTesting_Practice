@@ -15,7 +15,7 @@ export const CardManagement = () => {
   // const [cards, setCards] = useState<CardResponse[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
 
-  const {cards, isLoading, fetchCards, addCard, updateCard, deleteCard} = useCardStore();
+  const {cards, isLoading, initialize, fetchCards, addCard, updateCard, deleteCard} = useCardStore();
 
   // 搜索参数
   const [searchCardNumber, setSearchCardNumber] = useState('');
@@ -75,7 +75,23 @@ export const CardManagement = () => {
     }
   };
 
-  useEffect(() => { handleFetchCards(); }, [filterDeleted]);
+  useEffect(() => { void initialize(); }, [initialize]);
+
+  useEffect(() => {
+    void fetchCards({
+      cardNumber:
+        searchCardNumber.trim() ||
+        undefined,
+
+      expiryDate:
+        searchExpiry.trim() ||
+        undefined,
+
+      isDeleted:
+        filterDeleted ??
+        undefined,
+    });
+  }, [filterDeleted, fetchCards]);
 
   const handleReset = async() => {
     setSearchCardNumber('');
@@ -109,7 +125,6 @@ export const CardManagement = () => {
       // await cardService.deleteCard(id);
       await deleteCard(id);
       toast.success('删除成功');
-      fetchCards();
     } catch (error) { toast.error('删除失败'); }
   };
 
@@ -140,7 +155,6 @@ export const CardManagement = () => {
         toast.success('新卡片添加成功');
       }
       setIsDialogOpen(false);
-      fetchCards();
     } catch (error) { toast.error('保存失败'); }
   };
 

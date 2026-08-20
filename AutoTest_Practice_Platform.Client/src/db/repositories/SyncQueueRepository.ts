@@ -6,11 +6,13 @@ import type {
   SyncQueueItem,
 } from '../syncModels';
 
+
 export const syncQueueRepository = {
 
-  /**
-   * 添加同步任务。
-   */
+  // ==========================================================
+  // 添加任务
+  // ==========================================================
+
   async add(
     item: SyncQueueItem,
   ): Promise<number> {
@@ -20,11 +22,13 @@ export const syncQueueRepository = {
     );
   },
 
-  /**
-   * 获取所有同步任务。
-   *
-   * 按创建时间顺序处理。
-   */
+
+  // ==========================================================
+  // 获取全部任务
+  //
+  // 按创建时间顺序执行。
+  // ==========================================================
+
   async getAll(): Promise<
     SyncQueueItem[]
   > {
@@ -34,9 +38,11 @@ export const syncQueueRepository = {
       .toArray();
   },
 
-  /**
-   * 删除已经完成的同步任务。
-   */
+
+  // ==========================================================
+  // 删除已完成任务
+  // ==========================================================
+
   async remove(
     id: number,
   ): Promise<void> {
@@ -46,68 +52,11 @@ export const syncQueueRepository = {
     );
   },
 
-  /**
-   * 修改 Queue 中的 entityId。
-   *
-   * Local UUID 同步为 Server UUID 后，
-   * 后续 update/delete 必须使用 Server ID。
-   */
-  async replaceEntityId(
-    oldId: string,
-    newId: string,
-  ): Promise<void> {
 
-    const items =
-      await db.syncQueue
-        .where('entityId')
-        .equals(oldId)
-        .toArray();
+  // ==========================================================
+  // 合并 Update
+  // ==========================================================
 
-    await db.transaction(
-      'rw',
-      db.syncQueue,
-      async () => {
-
-        for (
-          const item of items
-        ) {
-
-          if (
-            item.id === undefined
-          ) {
-            continue;
-          }
-
-          await db.syncQueue.update(
-            item.id,
-            {
-              entityId: newId,
-            },
-          );
-        }
-      },
-    );
-  },
-  /**
-   * 合并 Card Update Queue。
-   *
-   * 修改原因：
-   *
-   * 用户可能连续修改同一张卡：
-   *
-   * Update A
-   * Update B
-   * Update C
-   *
-   * 没必要产生三个网络请求。
-   *
-   * 最终只需要：
-   *
-   * Update C
-   *
-   * 如果当前 Card 还存在 Create Queue，
-   * 则直接把最终数据合并进 Create Queue。
-   */
   async upsertCardUpdate(
     item: SyncQueueItem,
   ): Promise<void> {
@@ -119,19 +68,13 @@ export const syncQueueRepository = {
         .toArray();
 
 
-    // ==========================================================
-    // 如果存在 Create Queue
-    // ==========================================================
-    //
+    // ========================================================
     // Create 尚未同步：
     //
-    // Create
-    // +
-    // Update
+    // Create + Update
     //
-    // 最终只需要 Create，
-    // 但 payload 使用最新数据。
-    // ==========================================================
+    // 直接更新 Create payload。
+    // ========================================================
 
     const createItem =
       queue.find(
@@ -142,18 +85,19 @@ export const syncQueueRepository = {
 
 
     if (
-      createItem &&
-      createItem.id !== undefined
+      createItem?.id !== undefined
     ) {
 
       await db.syncQueue.update(
         createItem.id,
         {
+
           payload:
             item.payload,
 
           createdAt:
             item.createdAt,
+
         },
       );
 
@@ -161,9 +105,15 @@ export const syncQueueRepository = {
     }
 
 
-    // ==========================================================
-    // 已存在 Update Queue
-    // ==========================================================
+    // ========================================================
+    // 已存在 Update：
+    //
+    // Update A
+    // Update B
+    // Update C
+    //
+    // 最终只保留 Update C。
+    // ========================================================
 
     const updateItem =
       queue.find(
@@ -174,18 +124,19 @@ export const syncQueueRepository = {
 
 
     if (
-      updateItem &&
-      updateItem.id !== undefined
+      updateItem?.id !== undefined
     ) {
 
       await db.syncQueue.update(
         updateItem.id,
         {
+
           payload:
             item.payload,
 
           createdAt:
             item.createdAt,
+
         },
       );
 
@@ -193,14 +144,20 @@ export const syncQueueRepository = {
     }
 
 
-    // ==========================================================
-    // 没有现有任务
-    // ==========================================================
+    // ========================================================
+    // 第一次 Update
+    // ========================================================
 
     await db.syncQueue.add(
       item,
     );
   },
+
+
+  // ==========================================================
+  // 合并 Delete
+  // ==========================================================
+
   async upsertCardDelete(
     entityId: string,
   ): Promise<void> {
@@ -212,6 +169,14 @@ export const syncQueueRepository = {
         .toArray();
 
 
+    // ========================================================
+    // Create + Delete
+    //
+    // Server 根本还没有这张卡。
+    //
+    // 因此无需请求 Create，也无需请求 Delete。
+    // ========================================================
+
     const createItem =
       queue.find(
         x =>
@@ -220,17 +185,8 @@ export const syncQueueRepository = {
       );
 
 
-    // ==========================================================
-    // Create 尚未同步：
-    //
-    // Server 根本不存在这条数据。
-    //
-    // 所以不需要 Delete API。
-    // ==========================================================
-
     if (
-      createItem &&
-      createItem.id !== undefined
+      createItem?.id !== undefined
     ) {
 
       await db.syncQueue.delete(
@@ -241,9 +197,9 @@ export const syncQueueRepository = {
     }
 
 
-    // ==========================================================
-    // 删除已有 Update Queue
-    // ==========================================================
+    // ========================================================
+    // 删除已有 Update
+    // ========================================================
 
     const updateItem =
       queue.find(
@@ -254,8 +210,7 @@ export const syncQueueRepository = {
 
 
     if (
-      updateItem &&
-      updateItem.id !== undefined
+      updateItem?.id !== undefined
     ) {
 
       await db.syncQueue.delete(
@@ -264,9 +219,10 @@ export const syncQueueRepository = {
     }
 
 
-    // ==========================================================
-    // 检查是否已经存在 Delete Queue
-    // ==========================================================
+    // ========================================================
+    // 如果已经有 Delete Queue，
+    // 不重复创建。
+    // ========================================================
 
     const deleteItem =
       queue.find(
@@ -281,9 +237,9 @@ export const syncQueueRepository = {
     }
 
 
-    // ==========================================================
+    // ========================================================
     // 创建 Delete Queue
-    // ==========================================================
+    // ========================================================
 
     await db.syncQueue.add({
 
@@ -297,6 +253,8 @@ export const syncQueueRepository = {
 
       createdAt:
         new Date().toISOString(),
+
     });
-  }
+  },
+
 };

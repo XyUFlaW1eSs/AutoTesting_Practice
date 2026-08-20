@@ -5,12 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static AutoTest_Practice_Platform.API.Contracts.CardContracts;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AutoTest_Practice_Platform.API.Controllers
 {
     [ApiController]
     [Route("api/cards")]
-    [AllowAnonymous]
+    [Authorize]
     public sealed class CardsController(AppDbContext db) : ControllerBase
     {
 
@@ -38,13 +39,13 @@ namespace AutoTest_Practice_Platform.API.Controllers
                             .Select(x => CardResponse.From(x))
                             .ToList();
 
-            var DeletedResult = data
+            var deletedResult = data
                             .Where(x => x.IsDeleted)
-                            .OrderBy(x => x.UpdatedAt)
+                            .OrderByDescending(x => x.UpdatedAt)
                             .Select(x => CardResponse.From(x))
                             .ToList();
 
-            var result = unDeletedResult.Concat(DeletedResult).ToList();
+            var result = unDeletedResult.Concat(deletedResult).ToList();
 
             return Ok(result);
         }

@@ -1,6 +1,4 @@
-import {
-  cardService,
-} from '@/api/cardService';
+import { cardService } from '@/api/cardService';
 
 import {
   cardRepository,
@@ -15,42 +13,21 @@ import type {
 } from '@/db/syncModels';
 
 
-// ============================================================
-// SyncService
-// ============================================================
-//
-// 职责：
-//
-// IndexedDB
-//     ↓
-// Sync Queue
-//     ↓
-// API
-//     ↓
-// IndexedDB
-//
-// Store 不负责调用 SyncService。
-// SyncService 自己负责网络恢复后的同步。
-// ============================================================
-
 let syncing = false;
 
 
 export const syncService = {
 
   // ==========================================================
-  // 执行一次同步
+  // 执行同步
   // ==========================================================
 
   async sync(): Promise<void> {
 
-    // 防止多个同步任务并发执行。
     if (syncing) {
       return;
     }
 
-
-    // 没有网络直接退出。
     if (!navigator.onLine) {
       return;
     }
@@ -58,31 +35,26 @@ export const syncService = {
 
     syncing = true;
 
-
     try {
 
       const queue =
         await syncQueueRepository.getAll();
 
 
-      for (
-        const item of queue
-      ) {
+      for (const item of queue) {
 
         try {
 
-          await this.process(
-            item,
-          );
+          await this.process(item);
 
         } catch (error) {
 
           // ==================================================
-          // 单个任务失败：
+          // 当前任务失败：
           //
-          // Queue 不删除。
+          // 不删除 Queue。
           //
-          // 下一次同步继续处理。
+          // 下一次网络恢复时继续。
           // ==================================================
 
           console.error(
@@ -91,6 +63,8 @@ export const syncService = {
             error,
           );
 
+          // 当前任务失败后停止后续任务。
+          // 保证 Queue 顺序。
           break;
         }
       }
@@ -103,7 +77,7 @@ export const syncService = {
 
 
   // ==========================================================
-  // 处理单个 Queue
+  // 单个任务
   // ==========================================================
 
   async process(
@@ -111,20 +85,18 @@ export const syncService = {
   ): Promise<void> {
 
     if (
-      item.entity !==
-      'card'
+      item.entity !== 'card'
     ) {
       return;
     }
 
 
     // ========================================================
-    // Create
+    // CREATE
     // ========================================================
 
     if (
-      item.operation ===
-      'create'
+      item.operation === 'create'
     ) {
 
       if (!item.payload) {
@@ -136,21 +108,20 @@ export const syncService = {
 
 
       // ======================================================
-      // 修改原因：
+      // 重要修改：
       //
-      // 后端 Create API 自己生成 Guid。
+      // 当前后端支持 CreateCardRequest.Id。
       //
-      // 因此不能把 Local UUID 当作 Server ID 传给后端。
+      // 所以 Local UUID 直接作为 Server Guid。
       //
-      // Local UUID：
-      //     只用于 IndexedDB / Queue
-      //
-      // Server UUID：
-      //     由后端创建
+      // Local ID === Server ID
       // ======================================================
 
       const response =
         await cardService.createCard({
+
+          id:
+            item.entityId,
 
           cardNumber:
             item.payload.cardNumber,
@@ -167,18 +138,10 @@ export const syncService = {
 
 
       // ======================================================
-      // 修改原因：
+      // Server 返回的数据作为最终本地数据。
       //
-      // Server 已经生成最终 ID。
-      //
-      // 删除本地 Local UUID，
-      // 保存服务器返回的正式 Card。
+      // ID 必须保持一致。
       // ======================================================
-
-      await cardRepository.deletePhysical(
-        item.entityId,
-      );
-
 
       await cardRepository.bulkPut([{
 
@@ -202,11 +165,12 @@ export const syncService = {
 
         updatedAt:
           response.updatedAt,
+
       }]);
 
 
       // ======================================================
-      // Queue 完成
+      // Queue 完成。
       // ======================================================
 
       if (
@@ -224,12 +188,11 @@ export const syncService = {
 
 
     // ========================================================
-    // Update
+    // UPDATE
     // ========================================================
 
     if (
-      item.operation ===
-      'update'
+      item.operation === 'update'
     ) {
 
       if (!item.payload) {
@@ -256,12 +219,13 @@ export const syncService = {
 
             isDeleted:
               item.payload.isDeleted,
+
           },
         );
 
 
       // ======================================================
-      // Server 返回最新数据。
+      // Server 返回值同步回 IndexedDB。
       // ======================================================
 
       await cardRepository.bulkPut([{
@@ -286,6 +250,7 @@ export const syncService = {
 
         updatedAt:
           response.updatedAt,
+
       }]);
 
 
@@ -304,12 +269,11 @@ export const syncService = {
 
 
     // ========================================================
-    // Delete
+    // DELETE
     // ========================================================
 
     if (
-      item.operation ===
-      'delete'
+      item.operation === 'delete'
     ) {
 
       await cardService.deleteCard(

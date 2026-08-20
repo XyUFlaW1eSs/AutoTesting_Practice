@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  cardService,
-} from '@/api/cardService';
+import { cardService } from '@/api/cardService';
 
 import type {
   CardQuery,
@@ -11,17 +9,11 @@ import type {
   UpdateCardRequest,
 } from '@/api/types';
 
-import {
-  cardRepository,
-} from '@/db/repositories/CardRepository';
+import { cardRepository } from '@/db/repositories/CardRepository';
 
-import {
-  syncQueueRepository,
-} from '@/db/repositories/SyncQueueRepository';
+import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
 
-import type {
-  DbCard,
-} from '@/db/models';
+import type { DbCard } from '@/db/models';
 
 
 // ============================================================
@@ -29,32 +21,18 @@ import type {
 // ============================================================
 //
 // IndexedDB 不保存 formattedInfo。
-// formattedInfo 只在 CardResponse 层动态生成。
+// formattedInfo 只是 UI / Copy 使用的数据。
 // ============================================================
 
-function toDbCard(
-  card: CardResponse,
-): DbCard {
+function toDbCard(card: CardResponse): DbCard {
   return {
     id: card.id,
-
-    cardNumber:
-      card.cardNumber,
-
-    expiryDate:
-      card.expiryDate,
-
-    ccv:
-      card.ccv,
-
-    isDeleted:
-      card.isDeleted,
-
-    createdAt:
-      card.createdAt,
-
-    updatedAt:
-      card.updatedAt,
+    cardNumber: card.cardNumber,
+    expiryDate: card.expiryDate,
+    ccv: card.ccv,
+    isDeleted: card.isDeleted,
+    createdAt: card.createdAt,
+    updatedAt: card.updatedAt,
   };
 }
 
@@ -63,66 +41,49 @@ function toDbCard(
 // DbCard -> CardResponse
 // ============================================================
 //
-// 修改原因：
-// formattedInfo 是展示/Copy 用的数据，不需要持久化到 IndexedDB。
-// 每次从 IndexedDB 读取后重新生成即可。
+// formattedInfo 不进入 IndexedDB。
+// 从 IndexedDB 读取后动态生成。
 // ============================================================
 
-function toCardResponse(
-  card: DbCard,
-): CardResponse {
+function toCardResponse(card: DbCard): CardResponse {
   return {
     id: card.id,
-
-    cardNumber:
-      card.cardNumber,
-
-    expiryDate:
-      card.expiryDate,
-
-    ccv:
-      card.ccv,
+    cardNumber: card.cardNumber,
+    expiryDate: card.expiryDate,
+    ccv: card.ccv,
 
     formattedInfo:
       `Card Number: ${card.cardNumber}\n` +
       `Expires: ${card.expiryDate}\n` +
       `CCV: ${card.ccv}`,
 
-    isDeleted:
-      card.isDeleted,
-
-    createdAt:
-      card.createdAt,
-
-    updatedAt:
-      card.updatedAt,
+    isDeleted: card.isDeleted,
+    createdAt: card.createdAt,
+    updatedAt: card.updatedAt,
   };
 }
 
 
-// ============================================================
-// Store
-// ============================================================
-
 interface CardStore {
-
   cards: CardResponse[];
 
   isLoading: boolean;
 
   /**
-   * 初始化本地数据库。
+   * 首次初始化：
    *
-   * IndexedDB 有数据：
-   *     IndexedDB -> UI
+   * IndexedDB 有数据
+   *     ↓
+   * IndexedDB → UI
    *
-   * IndexedDB 为空：
-   *     API -> IndexedDB -> UI
+   * IndexedDB 为空
+   *     ↓
+   * API → IndexedDB → UI
    */
   initialize: () => Promise<void>;
 
   /**
-   * 查询本地 IndexedDB。
+   * 只查询 IndexedDB。
    *
    * 不访问服务器。
    */
@@ -154,361 +115,345 @@ interface CardStore {
 }
 
 
-export const useCardStore =
-  create<CardStore>(
-    (set, get) => ({
+export const useCardStore = create<CardStore>(
+  (set, get) => ({
 
-      cards: [],
+    cards: [],
 
-      isLoading: false,
-
-
-      // ======================================================
-      // 初始化
-      // ======================================================
-      //
-      // 修改原因：
-      //
-      // 初始化只发生一次：
-      //
-      // IndexedDB 有数据
-      //     ↓
-      // IndexedDB
-      //
-      // IndexedDB 为空
-      //     ↓
-      // API
-      //     ↓
-      // IndexedDB
-      //
-      // 不在这里执行 SyncService。
-      // 同步职责由 SyncService 自己管理。
-      // ======================================================
-
-      initialize: async () => {
-
-        set({
-          isLoading: true,
-        });
-
-        try {
-
-          const isEmpty =
-            await cardRepository.isEmpty();
+    isLoading: false,
 
 
-          if (isEmpty) {
+    // ==========================================================
+    // 初始化
+    // ==========================================================
+    //
+    // 这是整个 Local-First 数据初始化的唯一入口。
+    //
+    // 注意：
+    // 后续页面刷新不再请求 Card API。
+    // ==========================================================
 
-            try {
+    initialize: async () => {
 
-              // ==================================================
-              // 第一次初始化：
-              //
-              // Server -> IndexedDB
-              // ==================================================
+      set({
+        isLoading: true,
+      });
 
-              const remoteCards =
-                await cardService.getCards();
+      try {
 
-              await cardRepository.bulkPut(
-                remoteCards.map(
-                  toDbCard,
-                ),
-              );
+        const isEmpty =
+          await cardRepository.isEmpty();
 
-            } catch (error) {
 
-              // ==================================================
-              // 修改原因：
-              //
-              // API 不可用时不能阻止 Local-First 应用启动。
-              //
-              // 如果本地确实为空，则没有数据可以展示。
-              // ==================================================
+        if (isEmpty) {
 
-              console.error(
-                'Failed to initialize cards from server:',
-                error,
-              );
-            }
+          try {
+
+            // ==================================================
+            // 第一次初始化：
+            //
+            // Server → IndexedDB
+            // ==================================================
+
+            const remoteCards =
+              await cardService.getCards();
+
+            await cardRepository.bulkPut(
+              remoteCards.map(toDbCard),
+            );
+
+          } catch (error) {
+
+            // ==================================================
+            // API 不可用时：
+            //
+            // 不破坏 Local-First。
+            //
+            // 如果本地为空，则最终显示空列表。
+            // ==================================================
+
+            console.error(
+              'Failed to initialize cards from server:',
+              error,
+            );
           }
-
-
-          // ====================================================
-          // 初始化完成：
-          // 只从 IndexedDB 获取一次。
-          // ====================================================
-
-          const cards =
-            await cardRepository.getAll();
-
-          set({
-            cards:
-              cards.map(
-                toCardResponse,
-              ),
-          });
-
-        } catch (error) {
-
-          console.error(
-            'Card initialization failed:',
-            error,
-          );
-
-        } finally {
-
-          set({
-            isLoading: false,
-          });
         }
-      },
 
 
-      // ======================================================
-      // 本地查询
-      // ======================================================
-      //
-      // 修改原因：
-      //
-      // fetchCards 的职责只有一个：
-      //
-      // IndexedDB -> Store
-      //
-      // 绝对不请求 API。
-      // ======================================================
-
-      fetchCards: async (
-        query,
-      ) => {
+        // ======================================================
+        // 初始化完成后只从 IndexedDB 读取。
+        // ======================================================
 
         const cards =
-          await cardRepository.getAll(
-            query,
-          );
+          await cardRepository.getAll();
 
         set({
           cards:
-            cards.map(
-              toCardResponse,
-            ),
+            cards.map(toCardResponse),
         });
-      },
+
+      } catch (error) {
+
+        console.error(
+          'Card initialization failed:',
+          error,
+        );
+
+      } finally {
+
+        set({
+          isLoading: false,
+        });
+      }
+    },
 
 
-      // ======================================================
-      // Local-First Create
-      // ======================================================
+    // ==========================================================
+    // 本地查询
+    // ==========================================================
+    //
+    // 修改原因：
+    //
+    // fetchCards 只做：
+    //
+    // IndexedDB → Zustand
+    //
+    // 不再执行任何 API 请求。
+    // ==========================================================
 
-      addCard: async (
-        card,
-      ) => {
+    fetchCards: async (query) => {
 
-        const now =
-          new Date().toISOString();
+      const cards =
+        await cardRepository.getAll(query);
 
-        // ====================================================
-        // Local UUID。
-        //
-        // 这个 ID 只用于本地 Queue 关联。
-        //
-        // 后端 Create API 不使用这个 ID。
-        // ====================================================
-
-        const localId =
-          crypto.randomUUID();
+      set({
+        cards:
+          cards.map(toCardResponse),
+      });
+    },
 
 
-        const newCard: DbCard = {
+    // ==========================================================
+    // 新增
+    // ==========================================================
 
-          id:
-            localId,
+    addCard: async (card) => {
+
+      const now =
+        new Date().toISOString();
+
+
+      // ========================================================
+      // 生成 UUID。
+      //
+      // 当前后端 Create API 支持客户端传入 Guid。
+      //
+      // 因此：
+      //
+      // Local ID === Server ID
+      //
+      // 不再需要 Local ID → Server ID 映射。
+      // ========================================================
+
+      const id =
+        crypto.randomUUID();
+
+
+      const newCard: DbCard = {
+
+        id,
+
+        cardNumber:
+          card.cardNumber,
+
+        expiryDate:
+          card.expiryDate,
+
+        ccv:
+          card.ccv,
+
+        isDeleted:
+          card.isDeleted ?? false,
+
+        createdAt:
+          now,
+
+        updatedAt:
+          now,
+      };
+
+
+      // ========================================================
+      // 第一步：
+      // IndexedDB
+      // ========================================================
+
+      await cardRepository.insert(
+        newCard,
+      );
+
+
+      // ========================================================
+      // 第二步：
+      // Sync Queue
+      //
+      // 注意：
+      // 此处不直接访问服务器。
+      // ========================================================
+
+      await syncQueueRepository.add({
+
+        entity:
+          'card',
+
+        entityId:
+          id,
+
+        operation:
+          'create',
+
+        createdAt:
+          now,
+
+        payload: {
 
           cardNumber:
-            card.cardNumber,
+            newCard.cardNumber,
 
           expiryDate:
-            card.expiryDate,
+            newCard.expiryDate,
 
           ccv:
-            card.ccv,
+            newCard.ccv,
 
           isDeleted:
-            card.isDeleted ??
-            false,
+            newCard.isDeleted,
+        },
 
-          createdAt:
-            now,
-
-          updatedAt:
-            now,
-        };
+      });
 
 
-        // ====================================================
-        // 第一步：
-        // IndexedDB
-        // ====================================================
+      // ========================================================
+      // 第三步：
+      // 立即刷新 UI。
+      // ========================================================
 
-        await cardRepository.insert(
-          newCard,
-        );
-
-
-        // ====================================================
-        // 第二步：
-        // 创建 Sync Queue。
-        //
-        // 注意：
-        // 不直接调用 API。
-        // ====================================================
-
-        await syncQueueRepository.add({
-
-          entity:
-            'card',
-
-          entityId:
-            localId,
-
-          operation:
-            'create',
-
-          createdAt:
-            now,
-
-          payload: {
-
-            cardNumber:
-              newCard.cardNumber,
-
-            expiryDate:
-              newCard.expiryDate,
-
-            ccv:
-              newCard.ccv,
-
-            isDeleted:
-              newCard.isDeleted,
-          },
-        });
+      await get().fetchCards();
+    },
 
 
-        // ====================================================
-        // 第三步：
-        // 立即刷新 UI。
-        // ====================================================
+    // ==========================================================
+    // 修改
+    // ==========================================================
 
-        await get().fetchCards();
-      },
+    updateCard: async (
+      id,
+      changes,
+    ) => {
 
+      // ========================================================
+      // 第一步：
+      // IndexedDB
+      // ========================================================
 
-      // ======================================================
-      // Local-First Update
-      // ======================================================
-
-      updateCard: async (
+      await cardRepository.update(
         id,
         changes,
-      ) => {
+      );
 
-        // ====================================================
-        // 第一步：
-        // 修改 IndexedDB
-        // ====================================================
 
-        await cardRepository.update(
+      // ========================================================
+      // 第二步：
+      // 合并 Sync Queue
+      // ========================================================
+
+      await syncQueueRepository.upsertCardUpdate({
+
+        entity:
+          'card',
+
+        entityId:
           id,
-          changes,
-        );
+
+        operation:
+          'update',
+
+        createdAt:
+          new Date().toISOString(),
+
+        payload: {
+
+          cardNumber:
+            changes.cardNumber,
+
+          expiryDate:
+            changes.expiryDate,
+
+          ccv:
+            changes.ccv,
+
+          isDeleted:
+            changes.isDeleted,
+        },
+
+      });
 
 
-        // ====================================================
-        // 第二步：
-        // 更新/合并 Queue
-        // ====================================================
+      // ========================================================
+      // 第三步：
+      // IndexedDB → UI
+      // ========================================================
 
-        await syncQueueRepository.upsertCardUpdate({
-
-          entity:
-            'card',
-
-          entityId:
-            id,
-
-          operation:
-            'update',
-
-          createdAt:
-            new Date().toISOString(),
-
-          payload: {
-
-            cardNumber:
-              changes.cardNumber,
-
-            expiryDate:
-              changes.expiryDate,
-
-            ccv:
-              changes.ccv,
-
-            isDeleted:
-              changes.isDeleted,
-          },
-        });
+      await get().fetchCards();
+    },
 
 
-        // ====================================================
-        // 第三步：
-        // IndexedDB -> UI
-        // ====================================================
+    // ==========================================================
+    // 删除
+    // ==========================================================
 
-        await get().fetchCards();
-      },
+    deleteCard: async (
+      id,
+    ) => {
 
+      // ========================================================
+      // 第一步：
+      // IndexedDB Soft Delete
+      // ========================================================
 
-      // ======================================================
-      // Local-First Delete
-      // ======================================================
-
-      deleteCard: async (
+      await cardRepository.delete(
         id,
-      ) => {
-
-        // ====================================================
-        // 第一步：
-        // IndexedDB Soft Delete
-        // ====================================================
-
-        await cardRepository.delete(
-          id,
-        );
+      );
 
 
-        // ====================================================
-        // 第二步：
-        // Queue
-        // ====================================================
+      // ========================================================
+      // 第二步：
+      // 合并 Delete Queue
+      // ========================================================
 
-        await syncQueueRepository.upsertCardDelete(
-          id,
-        );
+      await syncQueueRepository.upsertCardDelete(
+        id,
+      );
 
-        // ====================================================
-        // 第三步：
-        // 当前 UI 直接隐藏。
-        // ====================================================
 
-        set(state => ({
+      // ========================================================
+      // 第三步：
+      // 当前列表立即隐藏。
+      //
+      // 注意：
+      // IndexedDB 中的数据仍然存在。
+      // ========================================================
 
-          cards:
-            state.cards.filter(
-              card =>
-                card.id !== id,
-            ),
+      set(state => ({
 
-        }));
-      },
-    }),
-  );
+        cards:
+          state.cards.filter(
+            card =>
+              card.id !== id,
+          ),
+
+      }));
+    },
+
+  }),
+);

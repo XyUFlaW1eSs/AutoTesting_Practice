@@ -11,24 +11,39 @@ interface AuthState {
   fetchUser: () => Promise<void>;
 }
 
+const loadStoredUser = (): UserResponse | null => {
+  try {
+    const raw = localStorage.getItem('auth_user');
+    if (!raw) return null;
+    return JSON.parse(raw) as UserResponse;
+  } catch {
+    localStorage.removeItem('auth_user');
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   token: localStorage.getItem('auth_token'),
-  user: null,
+  user: loadStoredUser(),
   isFetchingUser: false,
   
   setAuth: (data) => {
     if (data.token) localStorage.setItem('auth_token', data.token);
     if (data.refreshToken) localStorage.setItem('auth_refresh_token', data.refreshToken);
     if (data.userId) localStorage.setItem('auth_user_id', data.userId);
+
+    const user: UserResponse = {
+      id: data.userId,
+      userName: data.userName,
+      email: data.email,
+      role: data.role,
+    };
+
+    localStorage.setItem('auth_user', JSON.stringify(user));
     
     set({
       token: data.token || null,
-      user: {
-        id: data.userId,
-        userName: data.userName,
-        email: data.email,
-        role: data.role,
-      }
+      user
     });
   },
   
@@ -36,6 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_refresh_token');
     localStorage.removeItem('auth_user_id');
+    localStorage.removeItem('auth_user');
     set({ token: null, user: null });
   },
 
@@ -48,9 +64,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isFetchingUser: true });
     try {
       const userData = await authService.getMe();
+      localStorage.setItem('auth_user', JSON.stringify(userData));
       set({ user: userData });
     } catch (error) {
-      console.error('获取当前用户信息失败', error);
+      console.error('无法从服务器获取当前用户，继续使用本地认证状态', error);
+
+      if ( !user ) {
+        // 如果本地没有 user 信息，则清理 Token，避免后续请求失败
+        const storedUser = loadStoredUser();
+        if (storedUser) {
+          set({ user: storedUser });
+        }
+      }
     } finally {
       set({ isFetchingUser: false });
     }
