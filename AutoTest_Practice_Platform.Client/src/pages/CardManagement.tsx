@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cardService } from '../api/cardService';
+import { useCardStore } from '../store/useCardStore';
 import type { CardResponse } from '../api/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
