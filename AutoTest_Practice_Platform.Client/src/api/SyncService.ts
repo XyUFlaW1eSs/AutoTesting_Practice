@@ -16,6 +16,36 @@ import type {
 let syncing = false;
 
 
+// ============================================================
+// 判断 Queue 在同步过程中是否发生变化
+//
+// 注意：
+//
+// 这里只比较会影响同步内容的字段。
+// id 本身不会变化。
+// ============================================================
+
+const isQueueUnchanged = (
+  original: SyncQueueItem,
+  current: SyncQueueItem | undefined,
+): boolean => {
+
+  if (!current) {
+    return false;
+  }
+
+  return (
+    current.id === original.id &&
+    current.entity === original.entity &&
+    current.entityId === original.entityId &&
+    current.operation === original.operation &&
+    current.createdAt === original.createdAt &&
+    JSON.stringify(current.payload) ===
+      JSON.stringify(original.payload)
+  );
+};
+
+
 export const syncService = {
 
   // ==========================================================
@@ -63,7 +93,7 @@ export const syncService = {
             error,
           );
 
-          // 当前任务失败后停止后续任务。
+          // 当前任务失败后停止后续任务，
           // 保证 Queue 顺序。
           break;
         }
@@ -108,14 +138,20 @@ export const syncService = {
 
 
       // ======================================================
-      // 重要修改：
+      // P0：
       //
-      // 当前后端支持 CreateCardRequest.Id。
+      // 保存当前 Queue 快照。
       //
-      // 所以 Local UUID 直接作为 Server Guid。
-      //
-      // Local ID === Server ID
+      // API 请求期间用户可能再次修改这张 Card。
       // ======================================================
+
+      const originalQueue = {
+        ...item,
+        payload: item.payload
+          ? { ...item.payload }
+          : undefined,
+      };
+
 
       const response =
         await cardService.createCard({
@@ -138,9 +174,50 @@ export const syncService = {
 
 
       // ======================================================
-      // Server 返回的数据作为最终本地数据。
+      // P0：
       //
-      // ID 必须保持一致。
+      // API 返回后重新检查 Queue。
+      // ======================================================
+
+      const currentQueue =
+        item.id !== undefined
+          ? await syncQueueRepository.getById(
+              item.id,
+            )
+          : undefined;
+
+
+      if (
+        !isQueueUnchanged(
+          originalQueue,
+          currentQueue,
+        )
+      ) {
+
+        // ====================================================
+        // 用户在 API 请求期间修改了 Card。
+        //
+        // 旧 API Response 不能覆盖本地最新数据。
+        //
+        // Server 当前保存的是旧版本，
+        // 新版本仍然留在 Queue 中。
+        //
+        // 下一次 sync 会继续处理。
+        // ====================================================
+
+        console.info(
+          'Card was modified during Create sync. ' +
+          'Keep the latest local version and Queue.',
+        );
+
+        return;
+      }
+
+
+      // ======================================================
+      // Queue 没有变化：
+      //
+      // Server Response 可以安全写入 IndexedDB。
       // ======================================================
 
       await cardRepository.bulkPut([{
@@ -168,10 +245,6 @@ export const syncService = {
 
       }]);
 
-
-      // ======================================================
-      // Queue 完成。
-      // ======================================================
 
       if (
         item.id !== undefined
@@ -203,6 +276,19 @@ export const syncService = {
       }
 
 
+      // ======================================================
+      // P0：
+      // 保存 Queue 快照。
+      // ======================================================
+
+      const originalQueue = {
+        ...item,
+        payload: item.payload
+          ? { ...item.payload }
+          : undefined,
+      };
+
+
       const response =
         await cardService.updateCard(
           item.entityId,
@@ -225,7 +311,45 @@ export const syncService = {
 
 
       // ======================================================
-      // Server 返回值同步回 IndexedDB。
+      // P0：
+      // API 返回后重新检查 Queue。
+      // ======================================================
+
+      const currentQueue =
+        item.id !== undefined
+          ? await syncQueueRepository.getById(
+              item.id,
+            )
+          : undefined;
+
+
+      if (
+        !isQueueUnchanged(
+          originalQueue,
+          currentQueue,
+        )
+      ) {
+
+        // ====================================================
+        // 用户已经产生新的修改。
+        //
+        // 不使用旧 Response 覆盖 IndexedDB。
+        // 新 Queue 会在下一轮继续同步。
+        // ====================================================
+
+        console.info(
+          'Card was modified during Update sync. ' +
+          'Keep the latest local version and Queue.',
+        );
+
+        return;
+      }
+
+
+      // ======================================================
+      // Queue 没有变化：
+      //
+      // Server Response 可以安全写入 IndexedDB。
       // ======================================================
 
       await cardRepository.bulkPut([{
@@ -276,9 +400,51 @@ export const syncService = {
       item.operation === 'delete'
     ) {
 
+      // ======================================================
+      // P0：
+      //
+      // 删除请求期间如果用户又产生了新的操作，
+      // Queue 会发生变化。
+      // ======================================================
+
+      const originalQueue = {
+        ...item,
+      };
+
+
       await cardService.deleteCard(
         item.entityId,
       );
+
+
+      const currentQueue =
+        item.id !== undefined
+          ? await syncQueueRepository.getById(
+              item.id,
+            )
+          : undefined;
+
+
+      if (
+        !isQueueUnchanged(
+          originalQueue,
+          currentQueue,
+        )
+      ) {
+
+        // ====================================================
+        // Queue 已经发生变化。
+        //
+        // 不删除新的 Queue。
+        // ====================================================
+
+        console.info(
+          'Card was modified during Delete sync. ' +
+          'Keep the latest Queue.',
+        );
+
+        return;
+      }
 
 
       if (

@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('auth_user', JSON.stringify(user));
     
     set({
-      token: data.token || null,
+      token: data.token ?? null,
       user
     });
   },
@@ -57,9 +57,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // 核心逻辑：使用本地的 Token 向后端换取最新的用户完整信息
   fetchUser: async () => {
-    const { token, user } = get();
+    const { token } = get();
     // 如果没有 Token，或者已经有了 user 信息，则不需要拉取
-    if (!token || user) return;
+    if (!token) return;
 
     set({ isFetchingUser: true });
     try {
@@ -69,8 +69,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('无法从服务器获取当前用户，继续使用本地认证状态', error);
 
-      if ( !user ) {
-        // 如果本地没有 user 信息，则清理 Token，避免后续请求失败
+      const currentState = get();
+
+      if ( currentState.token && !currentState.user ) {
         const storedUser = loadStoredUser();
         if (storedUser) {
           set({ user: storedUser });

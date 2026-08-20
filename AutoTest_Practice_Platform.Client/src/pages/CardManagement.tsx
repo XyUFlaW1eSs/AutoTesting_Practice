@@ -75,23 +75,32 @@ export const CardManagement = () => {
     }
   };
 
-  useEffect(() => { void initialize(); }, [initialize]);
-
   useEffect(() => {
-    void fetchCards({
-      cardNumber:
-        searchCardNumber.trim() ||
-        undefined,
 
-      expiryDate:
-        searchExpiry.trim() ||
-        undefined,
+    const initializeCards = async () => {
+      try {
+        await initialize();
+        await fetchCards({
+          cardNumber:
+            searchCardNumber.trim() ||
+            undefined,
 
-      isDeleted:
-        filterDeleted ??
-        undefined,
-    });
-  }, [filterDeleted, fetchCards]);
+          expiryDate:
+            searchExpiry.trim() ||
+            undefined,
+
+          isDeleted:
+            filterDeleted ??
+            undefined,
+        });
+      } catch (error) {
+        toast.error(
+          '初始化卡片数据失败',
+        );
+      }
+    };
+    void initializeCards();
+  }, [initialize, fetchCards]);
 
   const handleReset = async() => {
     setSearchCardNumber('');

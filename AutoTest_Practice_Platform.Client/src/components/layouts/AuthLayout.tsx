@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../api/authService';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import { initializeSync } from '@/api/syncInitializer';
 
 export const AuthLayout = () => {
   const { token, user, isFetchingUser, fetchUser, clearAuth } = useAuthStore();
@@ -12,7 +13,23 @@ export const AuthLayout = () => {
 
   // 1. 页面挂载或刷新时，尝试静默获取用户信息
   useEffect(() => {
-    fetchUser();
+    let cancelled = false;
+
+    const initializeAuthentication = async () => {
+      await fetchUser();
+
+      if (cancelled) return;
+      const { token: currentToken, user: currentUser } = useAuthStore.getState();
+
+      if (currentToken ) {
+        initializeSync();
+      }
+    };
+    void initializeAuthentication();
+
+    return () => {
+      cancelled = true;
+    }
   }, [fetchUser]);
 
   // 2. 拦截未登录用户
