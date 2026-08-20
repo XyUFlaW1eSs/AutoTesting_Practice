@@ -179,7 +179,7 @@ export interface CardResponse {
   formattedInfo: string;
   isDeleted: boolean;
   createdAt: string;
-  updatedAt? :string;
+  updatedAt: string | null;
 }
 
 export interface CreateCardRequest {
@@ -187,6 +187,7 @@ export interface CreateCardRequest {
   expiryDate: string;
   ccv: string;
   isDeleted?: boolean;
+  id?: string;
 }
 
 export interface UpdateCardRequest {

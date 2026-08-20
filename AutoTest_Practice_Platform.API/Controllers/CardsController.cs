@@ -55,6 +55,7 @@ namespace AutoTest_Practice_Platform.API.Controllers
         {
             var card = new CardItem
             {
+                Id = request.Id ?? Guid.NewGuid(),
                 CardNumber = request.CardNumber,
                 ExpiryDate = request.ExpiryDate,
                 Ccv = request.Ccv,
