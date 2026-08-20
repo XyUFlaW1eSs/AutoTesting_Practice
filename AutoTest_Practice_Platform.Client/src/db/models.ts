@@ -6,5 +6,5 @@ export interface DbCard {
   ccv: string;
   isDeleted: boolean;
   createdAt: string;
-  updatedAt: string | null;
+  updatedAt?: string;
 }

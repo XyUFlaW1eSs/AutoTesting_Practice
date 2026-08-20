@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cardService } from '../api/cardService';
+// import { cardService } from '../api/cardService';
 import { useCardStore } from '../store/useCardStore';
 import type { CardResponse } from '../api/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -12,8 +12,10 @@ import { toast } from 'sonner';
 import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
 
 export const CardManagement = () => {
-  const [cards, setCards] = useState<CardResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [cards, setCards] = useState<CardResponse[]>([]);
+  // const [isLoading, setIsLoading] = useState(true);
+
+  const {cards, isLoading, fetchCards, addCard, updateCard, deleteCard} = useCardStore();
 
   // 搜索参数
   const [searchCardNumber, setSearchCardNumber] = useState('');
@@ -35,30 +37,61 @@ export const CardManagement = () => {
     return `${month}/${futureYear}`;
   };
 
-  const fetchCards = async () => {
-    setIsLoading(true);
-    try {
-      const params: any = {};
-      if (searchCardNumber.trim()) params.cardNumber = searchCardNumber.trim();
-      if (searchExpiry.trim()) params.expiryDate = searchExpiry.trim();
-      if (filterDeleted != null) params.isDeleted = filterDeleted;
+  // const fetchCards = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const params: any = {};
+  //     if (searchCardNumber.trim()) params.cardNumber = searchCardNumber.trim();
+  //     if (searchExpiry.trim()) params.expiryDate = searchExpiry.trim();
+  //     if (filterDeleted != null) params.isDeleted = filterDeleted;
       
-      const data = await cardService.getCards(params);
-      setCards(data || []);
-    } catch (error) {
-      toast.error('获取卡片列表失败');
-    } finally {
-      setIsLoading(false);
+  //     const data = await cardService.getCards(params);
+  //     setCards(data || []);
+  //   } catch (error) {
+  //     toast.error('获取卡片列表失败');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  const handleFetchCards = async () => {
+    try {
+      await fetchCards({
+        cardNumber:
+          searchCardNumber.trim() ||
+          undefined,
+
+        expiryDate:
+          searchExpiry.trim() ||
+          undefined,
+
+        isDeleted:
+          filterDeleted ??
+          undefined,
+      });
+    } catch {
+      toast.error(
+        '获取卡片列表失败',
+      );
     }
   };
 
-  useEffect(() => { fetchCards(); }, [filterDeleted]);
+  useEffect(() => { handleFetchCards(); }, [filterDeleted]);
 
-  const handleReset = () => {
+  const handleReset = async() => {
     setSearchCardNumber('');
     setSearchExpiry('');
     setFilterDeleted(null)
-    setTimeout(() => fetchCards(), 0);
+    // setTimeout(() => fetchCards(), 0);
+      try {
+      // 修改：
+      // Reset 时明确查询全部本地 Card。
+      // 不依赖 React state 更新时序。
+      await fetchCards({});
+    } catch {
+      toast.error(
+        '获取卡片列表失败',
+      );
+    }
   };
 
   // 复制由后端生成的格式化字符串
@@ -73,7 +106,8 @@ export const CardManagement = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('确定要删除这张卡片吗？')) return;
     try {
-      await cardService.deleteCard(id);
+      // await cardService.deleteCard(id);
+      await deleteCard(id);
       toast.success('删除成功');
       fetchCards();
     } catch (error) { toast.error('删除失败'); }
@@ -97,10 +131,12 @@ export const CardManagement = () => {
     }
     try {
       if (editingId) {
-        await cardService.updateCard(editingId, formData);
+        // await cardService.updateCard(editingId, formData);
+        await updateCard(editingId, formData);
         toast.success('卡片已更新');
       } else {
-        await cardService.createCard(formData);
+        // await cardService.createCard(formData);
+        await addCard(formData);
         toast.success('新卡片添加成功');
       }
       setIsDialogOpen(false);
@@ -129,7 +165,7 @@ export const CardManagement = () => {
           <button onClick={() => setFilterDeleted(false)} className={`px-4 py-1 text-sm rounded-sm transition-colors ${filterDeleted === false ? 'bg-green-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>未删除</button>
           <button onClick={() => setFilterDeleted(true)} className={`px-4 py-1 text-sm rounded-sm transition-colors ${filterDeleted === true ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>已删除</button>
         </div>
-        <Button onClick={fetchCards} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Search className="w-4 h-4 mr-2" /> 检索</Button>
+        <Button onClick={handleFetchCards} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Search className="w-4 h-4 mr-2" /> 检索</Button>
         <Button onClick={handleReset} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 重置</Button>
         <Label className="text-zinc-400 text-sm ml-auto">共 {cards.length} 张卡片</Label>
       </div>
