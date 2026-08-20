@@ -106,39 +106,22 @@ function toCardResponse(
 interface CardStore {
 
   cards: CardResponse[];
-
   isLoading: boolean;
-
-  /**
-   * 首次初始化。
-   */
   initialize: () => Promise<void>;
 
-  /**
-   * 本地查询。
-   */
-  queryCards: (
+  fetchCards: (
     query?: CardQuery,
   ) => Promise<void>;
 
-  /**
-   * 新增。
-   */
   addCard: (
     card: CreateCardRequest,
   ) => Promise<void>;
 
-  /**
-   * 修改。
-   */
   updateCard: (
     id: string,
     changes: UpdateCardRequest,
   ) => Promise<void>;
 
-  /**
-   * 删除。
-   */
   deleteCard: (
     id: string,
   ) => Promise<void>;
@@ -253,7 +236,7 @@ export const useCardStore =
       // 本地查询
       // ======================================================
 
-      queryCards: async (
+      fetchCards: async (
         query,
       ) => {
 
@@ -352,7 +335,7 @@ export const useCardStore =
         // 立即更新 UI。
         // ====================================================
         await get()
-          .queryCards();
+          .fetchCards();
 
         // ====================================================
         // 第四步：
