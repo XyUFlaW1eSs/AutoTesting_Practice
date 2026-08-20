@@ -223,7 +223,7 @@ export const syncService = {
       await cardRepository.bulkPut([{
 
         id:
-          response.id,
+          item.entityId,
 
         cardNumber:
           response.cardNumber,
@@ -355,7 +355,7 @@ export const syncService = {
       await cardRepository.bulkPut([{
 
         id:
-          response.id,
+          item.entityId,
 
         cardNumber:
           response.cardNumber,
