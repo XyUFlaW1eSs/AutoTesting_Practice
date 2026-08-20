@@ -93,7 +93,7 @@ export const CardManagement = () => {
             filterDeleted ??
             undefined,
         });
-      } catch (error) {
+      } catch {
         toast.error(
           '初始化卡片数据失败',
         );
@@ -119,7 +119,7 @@ export const CardManagement = () => {
     }
   };
 
-  // 复制由后端生成的格式化字符串
+  // 复制前端根据本地 Card 数据生成的格式化信息。
   const handleCopy = (formattedText: string) => {
     navigator.clipboard.writeText(formattedText).then(() => {
       toast.success('卡片信息已复制到剪贴板！');
@@ -134,7 +134,7 @@ export const CardManagement = () => {
       // await cardService.deleteCard(id);
       await deleteCard(id);
       toast.success('删除成功');
-    } catch (error) { toast.error('删除失败'); }
+    } catch { toast.error('删除失败'); }
   };
 
   const openCreateDialog = () => {
@@ -144,7 +144,7 @@ export const CardManagement = () => {
   };
 
   const openEditDialog = (card: CardResponse) => {
-    setEditingId(card.id!);
+    setEditingId(card.id);
     setFormData({ cardNumber: card.cardNumber || '', expiryDate: card.expiryDate || '', ccv: card.ccv || '', isDeleted: card.isDeleted});
     setIsDialogOpen(true);
   };
@@ -164,7 +164,7 @@ export const CardManagement = () => {
         toast.success('新卡片添加成功');
       }
       setIsDialogOpen(false);
-    } catch (error) { toast.error('保存失败'); }
+    } catch { toast.error('保存失败'); }
   };
 
   return (
@@ -209,9 +209,9 @@ export const CardManagement = () => {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-               <TableRow><TableCell colSpan={4} className="text-center py-8 text-zinc-500">加载中...</TableCell></TableRow>
+               <TableRow><TableCell colSpan={7} className="text-center py-8 text-zinc-500">加载中...</TableCell></TableRow>
             ) : cards.length === 0 ? (
-               <TableRow><TableCell colSpan={4} className="text-center py-8 text-zinc-500">暂无卡片数据</TableCell></TableRow>
+               <TableRow><TableCell colSpan={7} className="text-center py-8 text-zinc-500">暂无卡片数据</TableCell></TableRow>
             ) : (
               cards.map(card => (
                 <TableRow key={card.id} className={`border-zinc-800 transition-colors ${card.isDeleted ? 'bg-red-950/20 opacity-80 hover:bg-red-950/40' : 'hover:bg-zinc-800/50'}`}>
@@ -237,7 +237,7 @@ export const CardManagement = () => {
                     <Button variant="outline" size="sm" onClick={() => openEditDialog(card)} className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800">
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(card.id!)} className="bg-red-600/80 hover:bg-red-600">
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(card.id)} className="bg-red-600/80 hover:bg-red-600">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>
