@@ -10,7 +10,7 @@
       <ImplicitUsings>enable</ImplicitUsings>
 	  
 	  <!-- Release publish -->
-	  <!--<DebugType>none</DebugType>-->
+	  <DebugType>none</DebugType>
 
 	  <!-- Single-file deployment -->
 	  <SelfContained>true</SelfContained>
@@ -50,6 +50,7 @@
 	  <Content Update="appsettings.Development.json">
 		  <CopyToPublishDirectory>Never</CopyToPublishDirectory>
 	  </Content>
+	  <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

@@ -89,11 +89,14 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("client");
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles();
 app.MapControllers();
-app.MapGet("/", () => Results.Redirect("/swagger"));
+//app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapFallbackToFile("index.html");
 
 app.Run();
