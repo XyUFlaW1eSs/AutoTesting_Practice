@@ -1,29 +1,61 @@
 import { db } from '../database';
 import type { DbCard } from '../models';
 
-export class CardRepository {
-
+export const cardRepository = {
+  /**
+   * 获取所有未删除的本地 Card。
+   */
   async getAll(): Promise<DbCard[]> {
-    return db.cards.filter(card => !card.isDeleted).toArray();
-  }
+    const cards = await db.cards.toArray();
+    return cards.filter(card => !card.isDeleted);
+  },
 
-  async insert(card: DbCard): Promise<string | number> {
-    card.createdAt = new Date().toISOString();
-    return db.cards.add(card);
-  }
+  /**
+   * 根据 ID 获取单个 Card。
+   */
+  async getById(id: string): Promise<DbCard | undefined> {
+    return db.cards.get(id);
+  },
 
-  async update(id: string | number, changes: Partial<DbCard>): Promise<number> {
-    changes.updatedAt = new Date().toISOString();
-    return db.cards.update(id, changes);
-  }
+  /**
+   * 新增本地 Card。
+   */
+  async insert(card: DbCard): Promise<string> {
+    await db.cards.add(card);
+    return card.id;
+  },
 
-  async delete(id: string | number): Promise<number> {
-    return db.cards.update(id, { isDeleted: true, updatedAt: new Date().toISOString() });
-  }
+  /**
+   * 更新本地 Card。
+   */
+  async update(
+    id: string,
+    changes: Partial<DbCard>,
+  ): Promise<void> {
+    await db.cards.update(id, {
+      ...changes,
+      updatedAt: new Date().toISOString(),
+    });
+  },
 
-  async bulkPut(cards: DbCard[]): Promise<string | number> {
-    return db.cards.bulkPut(cards);
-  }
-}
+  /**
+   * 软删除本地 Card。
+   *
+   * 不进行物理删除，因为后续 Phase 4 需要知道该记录曾经存在并被删除。
+   */
+  async delete(id: string): Promise<void> {
+    await db.cards.update(id, {
+      isDeleted: true,
+      updatedAt: new Date().toISOString(),
+    });
+  },
 
-export const cardRepository = new CardRepository();
+  /**
+   * 批量写入本地 Card。
+   *
+   * 用于首次从服务器初始化 IndexedDB。
+   */
+  async bulkPut(cards: DbCard[]): Promise<void> {
+    await db.cards.bulkPut(cards);
+  },
+};
