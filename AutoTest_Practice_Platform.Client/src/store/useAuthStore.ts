@@ -50,9 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userData = await authService.getMe();
       set({ user: userData });
     } catch (error) {
-      console.error('拉取用户信息失败，Token 可能已失效或被篡改');
-      // 如果后端报 401，直接清空状态，让路由守卫把用户踢回登录页
-      get().clearAuth(); 
+      console.error('获取当前用户信息失败', error);
     } finally {
       set({ isFetchingUser: false });
     }
