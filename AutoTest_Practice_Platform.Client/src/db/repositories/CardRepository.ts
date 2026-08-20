@@ -247,4 +247,22 @@ export const cardRepository = {
       },
     );
   },
+  
+  /**
+   * 物理删除本地记录。
+   *
+   * 修改原因：
+   *
+   * 正常业务删除必须使用 delete() 的 Soft Delete。
+   *
+   * 只有 Local-Only Create 已经成功同步到服务器，
+   * 并且服务器生成了新的正式 UUID 时，
+   * 才允许删除原来的 Local UUID。
+   *
+   * 此方法禁止 UI 直接使用。
+   */
+  async deletePhysical( id : string) : Promise<void> {
+    await db.cards.delete(id);
+  }
+
 };
