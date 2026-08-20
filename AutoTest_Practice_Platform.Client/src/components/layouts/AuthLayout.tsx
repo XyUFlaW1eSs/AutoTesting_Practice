@@ -19,7 +19,7 @@ export const AuthLayout = () => {
       await fetchUser();
 
       if (cancelled) return;
-      const { token: currentToken, user: currentUser } = useAuthStore.getState();
+      const { token: currentToken } = useAuthStore.getState();
 
       if (currentToken ) {
         initializeSync();
