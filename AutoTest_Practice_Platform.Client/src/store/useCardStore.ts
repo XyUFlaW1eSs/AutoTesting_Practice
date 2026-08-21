@@ -262,24 +262,12 @@ export const useCardStore = create<CardStore>(
       const newCard: DbCard = {
 
         id,
-
-        cardNumber:
-          card.cardNumber,
-
-        expiryDate:
-          card.expiryDate,
-
-        ccv:
-          card.ccv,
-
-        isDeleted:
-          card.isDeleted ?? false,
-
-        createdAt:
-          now,
-
-        updatedAt:
-          now,
+        cardNumber: card.cardNumber,
+        expiryDate: card.expiryDate,
+        ccv: card.ccv,
+        isDeleted: card.isDeleted ?? false,
+        createdAt: now,
+        updatedAt: null,
       };
 
 
@@ -405,47 +393,13 @@ export const useCardStore = create<CardStore>(
     // 删除
     // ==========================================================
 
-    deleteCard: async (
-      id,
-    ) => {
+    deleteCard: async (id,) => {
 
-      // ========================================================
-      // 第一步：
-      // IndexedDB Soft Delete
-      // ========================================================
+      await cardRepository.delete(id,);
 
-      await cardRepository.delete(
-        id,
-      );
+      await syncQueueRepository.upsertCardDelete(id,);
 
-
-      // ========================================================
-      // 第二步：
-      // 合并 Delete Queue
-      // ========================================================
-
-      await syncQueueRepository.upsertCardDelete(
-        id,
-      );
-
-
-      // ========================================================
-      // 第三步：
-      // 当前列表立即隐藏。
-      //
-      // 注意：
-      // IndexedDB 中的数据仍然存在。
-      // ========================================================
-
-      set(state => ({
-
-        cards:
-          state.cards.filter(
-            card =>
-              card.id !== id,
-          ),
-
-      }));
+      await get().fetchCards();
     },
 
   }),
