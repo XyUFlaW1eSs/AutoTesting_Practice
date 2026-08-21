@@ -109,9 +109,10 @@ export const useCardStore = create<CardStore>((set, get) => ({
         cardNumber: newCard.cardNumber,
         expiryDate: newCard.expiryDate,
         ccv: newCard.ccv,
-        isDeleted: newCard.isDeleted
+        isDeleted: newCard.isDeleted,
+        createdAt: newCard.createdAt,
+        updatedAt: newCard.updatedAt,
       },
-
     });
 
     await get().fetchCards();
@@ -125,12 +126,12 @@ export const useCardStore = create<CardStore>((set, get) => ({
       throw new Error(`Card not found`);
     }
 
-    const updatedAt = new Date().toISOString();
+    const now = new Date().toISOString();
 
     const updatedCard = {
       ...currentCard,
       ...changes,
-      updatedAt
+      now
     };
 
     await cardRepository.update(id, {
@@ -145,12 +146,13 @@ export const useCardStore = create<CardStore>((set, get) => ({
       entity: 'card',
       entityId: id,
       operation: 'update',
-      createdAt: updatedCard.updatedAt ?? new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       payload: {
         cardNumber: updatedCard.cardNumber,
         expiryDate: updatedCard.expiryDate,
         ccv: updatedCard.ccv,
-        isDeleted: updatedCard.isDeleted
+        isDeleted: updatedCard.isDeleted,
+        updatedAt: updatedCard.updatedAt,
       },
     });
 
