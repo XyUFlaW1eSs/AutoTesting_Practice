@@ -94,7 +94,6 @@ app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseStaticFiles();
 app.MapControllers();
 //app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapFallbackToFile("index.html");

@@ -50,7 +50,9 @@
 	  <Content Update="appsettings.Development.json">
 		  <CopyToPublishDirectory>Never</CopyToPublishDirectory>
 	  </Content>
-	  <Folder Include="wwwroot\" />
+	  <Folder Include="wwwroot\" 
+			  CopyToOutputDirectory="PreserveNewest" 
+			  CopyToPublishDirectory="PreserveNewest"/>
   </ItemGroup>
 
 </Project>
