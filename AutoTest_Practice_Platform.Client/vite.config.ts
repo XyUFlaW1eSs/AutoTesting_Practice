@@ -13,15 +13,18 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg.woff2}'],
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: 'AutoTest Platform',
         short_name: 'AutoTest',
         description: 'AutoTest Practice Platform PWA',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#09090b',
+        background_color: '#09090b',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'pwa-192x192.png',

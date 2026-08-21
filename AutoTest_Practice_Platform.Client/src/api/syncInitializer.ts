@@ -15,18 +15,11 @@ import { syncService } from '@/api/SyncService';
 let initialized = false;
 
 export const initializeSync = (): void => {
-
   if (initialized) {
     return;
   }
 
   initialized = true;
-
-  // ==========================================================
-  // 页面启动：
-  //
-  // 如果当前在线，立即尝试同步 Queue。
-  // ==========================================================
 
   const handleOnline = () => {
     void syncService.sync();
