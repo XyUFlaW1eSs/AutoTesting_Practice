@@ -10,7 +10,6 @@ import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
 import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
-import { useNetworkStore } from '@/store/useNetworkStore';
 
 export const CardManagement = () => {
   // const [cards, setCards] = useState<CardResponse[]>([]);
@@ -27,9 +26,6 @@ export const CardManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ cardNumber: '', expiryDate: '', ccv: '', isDeleted: false });
-
-  // 网络状态
-  const isOnline = useNetworkStore((state) => state.isOnline);
 
   // 计算默认有效期：当前时间推后 5 年，格式为 MM/YY
   const getDefaultExpiryDate = () => {
@@ -162,11 +158,13 @@ export const CardManagement = () => {
   };
 
   const handleRefresh = async () => {
-    if (!isOnline) {
-      return toast.error('当前离线，无法同步');
-    }
     try {
       await refreshFromServer();
+      await fetchCards({
+        cardNumber: searchCardNumber.trim() || undefined,
+        expiryDate: searchExpiry.trim() || undefined,
+        isDeleted: filterDeleted ?? undefined,
+      });
       toast.success('同步成功');
     } catch {
       toast.error('同步失败，请检查网络或稍后重试');
