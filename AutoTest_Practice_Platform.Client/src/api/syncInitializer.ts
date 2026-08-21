@@ -1,7 +1,4 @@
-import {
-  syncService,
-} from '@/api/SyncService';
-
+import { syncService } from '@/api/SyncService';
 
 // ============================================================
 // Sync Initializer
@@ -17,7 +14,6 @@ import {
 
 let initialized = false;
 
-
 export const initializeSync = (): void => {
 
   if (initialized) {
@@ -26,34 +22,19 @@ export const initializeSync = (): void => {
 
   initialized = true;
 
-
   // ==========================================================
   // 页面启动：
   //
   // 如果当前在线，立即尝试同步 Queue。
   // ==========================================================
 
-  if (navigator.onLine) {
+  const handleOnline = () => {
+    void syncService.sync();
+  };
 
+  window.addEventListener('online', handleOnline);
+
+  if (navigator.onLine) {
     void syncService.sync();
   }
-
-
-  // ==========================================================
-  // 网络恢复：
-  //
-  // Offline
-  // ↓
-  // Online
-  // ↓
-  // Sync Queue
-  // ==========================================================
-
-  window.addEventListener(
-    'online',
-    () => {
-
-      void syncService.sync();
-    },
-  );
 };

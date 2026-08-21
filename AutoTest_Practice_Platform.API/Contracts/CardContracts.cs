@@ -4,7 +4,7 @@ namespace AutoTest_Practice_Platform.API.Contracts
 {
     public class CardContracts
     {
-        public record CreateCardRequest(string CardNumber, string ExpiryDate, string Ccv, bool IsDeleted = false, Guid? Id);
+        public record CreateCardRequest(Guid? Id, string CardNumber, string ExpiryDate, string Ccv, bool IsDeleted = false);
         public record UpdateCardRequest(string CardNumber, string ExpiryDate, string Ccv, bool IsDeleted);
 
         public record CardResponse(

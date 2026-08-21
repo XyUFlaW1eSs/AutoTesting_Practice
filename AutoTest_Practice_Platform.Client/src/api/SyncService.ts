@@ -1,16 +1,10 @@
 import { cardService } from '@/api/cardService';
 
-import {
-  cardRepository,
-} from '@/db/repositories/CardRepository';
+import { cardRepository } from '@/db/repositories/CardRepository';
 
-import {
-  syncQueueRepository,
-} from '@/db/repositories/SyncQueueRepository';
+import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
 
-import type {
-  SyncQueueItem,
-} from '@/db/syncModels';
+import type { SyncQueueItem } from '@/db/syncModels';
 
 
 let syncing = false;
@@ -25,10 +19,7 @@ let syncing = false;
 // id 本身不会变化。
 // ============================================================
 
-const isQueueUnchanged = (
-  original: SyncQueueItem,
-  current: SyncQueueItem | undefined,
-): boolean => {
+const isQueueUnchanged = (original: SyncQueueItem, current: SyncQueueItem | undefined,): boolean => {
 
   if (!current) {
     return false;
@@ -41,7 +32,7 @@ const isQueueUnchanged = (
     current.operation === original.operation &&
     current.createdAt === original.createdAt &&
     JSON.stringify(current.payload) ===
-      JSON.stringify(original.payload)
+    JSON.stringify(original.payload)
   );
 };
 
@@ -53,54 +44,26 @@ export const syncService = {
   // ==========================================================
 
   async sync(): Promise<void> {
-
     if (syncing) {
       return;
     }
-
     if (!navigator.onLine) {
       return;
     }
-
-
     syncing = true;
-
     try {
-
-      const queue =
-        await syncQueueRepository.getAll();
-
+      const queue = await syncQueueRepository.getAll();
 
       for (const item of queue) {
-
         try {
-
           await this.process(item);
-
         } catch (error) {
-
-          // ==================================================
-          // 当前任务失败：
-          //
-          // 不删除 Queue。
-          //
-          // 下一次网络恢复时继续。
-          // ==================================================
-
-          console.error(
-            'Card sync failed:',
-            item,
-            error,
-          );
-
-          // 当前任务失败后停止后续任务，
-          // 保证 Queue 顺序。
+          console.error('Card sync failed:', item, error,);
           break;
         }
       }
 
     } finally {
-
       syncing = false;
     }
   },
@@ -110,13 +73,8 @@ export const syncService = {
   // 单个任务
   // ==========================================================
 
-  async process(
-    item: SyncQueueItem,
-  ): Promise<void> {
-
-    if (
-      item.entity !== 'card'
-    ) {
+  async process(item: SyncQueueItem,): Promise<void> {
+    if (item.entity !== 'card') {
       return;
     }
 
@@ -125,17 +83,10 @@ export const syncService = {
     // CREATE
     // ========================================================
 
-    if (
-      item.operation === 'create'
-    ) {
-
+    if (item.operation === 'create') {
       if (!item.payload) {
-
-        throw new Error(
-          'Create sync payload missing.',
-        );
+        throw new Error('Create sync payload missing.',);
       }
-
 
       // ======================================================
       // P0：
@@ -156,20 +107,15 @@ export const syncService = {
       const response =
         await cardService.createCard({
 
-          id:
-            item.entityId,
+          id: item.entityId,
 
-          cardNumber:
-            item.payload.cardNumber,
+          cardNumber: item.payload.cardNumber,
 
-          expiryDate:
-            item.payload.expiryDate,
+          expiryDate: item.payload.expiryDate,
 
-          ccv:
-            item.payload.ccv,
+          ccv: item.payload.ccv,
 
-          isDeleted:
-            item.payload.isDeleted,
+          isDeleted: item.payload.isDeleted,
         });
 
 
@@ -182,17 +128,12 @@ export const syncService = {
       const currentQueue =
         item.id !== undefined
           ? await syncQueueRepository.getById(
-              item.id,
-            )
+            item.id,
+          )
           : undefined;
 
 
-      if (
-        !isQueueUnchanged(
-          originalQueue,
-          currentQueue,
-        )
-      ) {
+      if (!isQueueUnchanged(originalQueue, currentQueue,)) {
 
         // ====================================================
         // 用户在 API 请求期间修改了 Card。
@@ -222,26 +163,19 @@ export const syncService = {
 
       await cardRepository.bulkPut([{
 
-        id:
-          item.entityId,
+        id: item.entityId,
 
-        cardNumber:
-          response.cardNumber,
+        cardNumber: response.cardNumber,
 
-        expiryDate:
-          response.expiryDate,
+        expiryDate: response.expiryDate,
 
-        ccv:
-          response.ccv,
+        ccv: response.ccv,
 
-        isDeleted:
-          response.isDeleted,
+        isDeleted: response.isDeleted,
 
-        createdAt:
-          response.createdAt,
+        createdAt: response.createdAt,
 
-        updatedAt:
-          response.updatedAt,
+        updatedAt: response.updatedAt,
 
       }]);
 
@@ -294,17 +228,13 @@ export const syncService = {
           item.entityId,
           {
 
-            cardNumber:
-              item.payload.cardNumber,
+            cardNumber: item.payload.cardNumber,
 
-            expiryDate:
-              item.payload.expiryDate,
+            expiryDate: item.payload.expiryDate,
 
-            ccv:
-              item.payload.ccv,
+            ccv: item.payload.ccv,
 
-            isDeleted:
-              item.payload.isDeleted,
+            isDeleted: item.payload.isDeleted,
 
           },
         );
@@ -318,8 +248,8 @@ export const syncService = {
       const currentQueue =
         item.id !== undefined
           ? await syncQueueRepository.getById(
-              item.id,
-            )
+            item.id,
+          )
           : undefined;
 
 
@@ -357,23 +287,17 @@ export const syncService = {
         id:
           item.entityId,
 
-        cardNumber:
-          response.cardNumber,
+        cardNumber: response.cardNumber,
 
-        expiryDate:
-          response.expiryDate,
+        expiryDate: response.expiryDate,
 
-        ccv:
-          response.ccv,
+        ccv: response.ccv,
 
-        isDeleted:
-          response.isDeleted,
+        isDeleted: response.isDeleted,
 
-        createdAt:
-          response.createdAt,
+        createdAt: response.createdAt,
 
-        updatedAt:
-          response.updatedAt,
+        updatedAt: response.updatedAt,
 
       }]);
 
@@ -420,8 +344,8 @@ export const syncService = {
       const currentQueue =
         item.id !== undefined
           ? await syncQueueRepository.getById(
-              item.id,
-            )
+            item.id,
+          )
           : undefined;
 
 

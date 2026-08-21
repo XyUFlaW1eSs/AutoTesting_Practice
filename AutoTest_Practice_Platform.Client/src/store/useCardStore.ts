@@ -346,21 +346,35 @@ export const useCardStore = create<CardStore>(
     // 修改
     // ==========================================================
 
-    updateCard: async (
-      id,
-      changes,
-    ) => {
+    updateCard: async (id, changes,) => {
 
+      // Phase 4：先从 IndexedDB 获取当前完整数据，
+      // 再将本次修改合并进去，保证 Sync Queue 始终保存完整 Card 数据。
+      const currentCards = await cardRepository.getAll();
+
+      const currentCard = currentCards.find(card => card.id === id);
+
+      if (!currentCard) {
+        throw new Error(`Card not found`);
+      }
+
+      const updatedCard = {
+        ...currentCard,
+        ...changes,
+        updatedAt: new Date().toISOString(),
+      };
       // ========================================================
       // 第一步：
       // IndexedDB
       // ========================================================
 
-      await cardRepository.update(
-        id,
-        changes,
-      );
-
+      await cardRepository.update(id, {
+        cardNumber: updatedCard.cardNumber,
+        expiryDate: updatedCard.expiryDate,
+        ccv: updatedCard.ccv,
+        isDeleted: updatedCard.isDeleted,
+        updatedAt: updatedCard.updatedAt,
+      });
 
       // ========================================================
       // 第二步：
@@ -368,42 +382,21 @@ export const useCardStore = create<CardStore>(
       // ========================================================
 
       await syncQueueRepository.upsertCardUpdate({
-
-        entity:
-          'card',
-
-        entityId:
-          id,
-
-        operation:
-          'update',
-
-        createdAt:
-          new Date().toISOString(),
-
+        entity: 'card',
+        entityId: id,
+        operation: 'update',
+        createdAt: updatedCard.updatedAt ?? new Date().toISOString(),
         payload: {
-
-          cardNumber:
-            changes.cardNumber,
-
-          expiryDate:
-            changes.expiryDate,
-
-          ccv:
-            changes.ccv,
-
-          isDeleted:
-            changes.isDeleted,
+          cardNumber: updatedCard.cardNumber,
+          expiryDate: updatedCard.expiryDate,
+          ccv: updatedCard.ccv,
+          isDeleted: updatedCard.isDeleted
         },
-
       });
-
-
       // ========================================================
       // 第三步：
       // IndexedDB → UI
       // ========================================================
-
       await get().fetchCards();
     },
 
