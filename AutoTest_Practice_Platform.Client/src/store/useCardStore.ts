@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { cardService } from '@/api/cardService';
+import { syncService } from '@/api/SyncService';
 import type { CardQuery, CardResponse, CreateCardRequest, UpdateCardRequest, } from '@/api/types';
 import { cardRepository } from '@/db/repositories/CardRepository';
 import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
@@ -44,142 +45,127 @@ interface CardStore {
   addCard: (card: CreateCardRequest,) => Promise<void>;
   updateCard: (id: string, changes: UpdateCardRequest,) => Promise<void>;
   deleteCard: (id: string,) => Promise<void>;
+  sync: () => Promise<void>;
 }
 
 
-export const useCardStore = create<CardStore>(
-  (set, get) => ({
+export const useCardStore = create<CardStore>((set, get) => ({
 
-    cards: [],
+  cards: [],
+  isLoading: false,
+  initialize: async () => {
+    set({ isLoading: true, });
+    try {
+      const isEmpty = await cardRepository.isEmpty();
 
-    isLoading: false,
+      if (isEmpty) {
+        try {
+          const remoteCards = await cardService.getCards();
+          await cardRepository.bulkPut(remoteCards.map(toDbCard),);
 
-    initialize: async () => {
-
-      set({ isLoading: true, });
-
-      try {
-        const isEmpty = await cardRepository.isEmpty();
-
-        if (isEmpty) {
-          try {
-            const remoteCards = await cardService.getCards();
-
-            await cardRepository.bulkPut(remoteCards.map(toDbCard),);
-
-          } catch (error) {
-            console.error('Failed to initialize cards from server:', error,);
-          }
+        } catch (error) {
+          console.error('Failed to initialize cards from server:', error,);
         }
-
-        const cards = await cardRepository.getAll();
-
-        set({ cards: cards.map(toCardResponse), });
-
-      } catch (error) {
-
-        console.error('Card initialization failed:', error,);
-
-      } finally {
-        set({ isLoading: false, });
       }
-    },
 
-    fetchCards: async (query) => {
-
-      const cards = await cardRepository.getAll(query);
-
+      const cards = await cardRepository.getAll();
       set({ cards: cards.map(toCardResponse), });
-    },
 
-    addCard: async (card) => {
+    } catch (error) {
+      console.error('Card initialization failed:', error,);
+    } finally {
+      set({ isLoading: false, });
+    }
+  },
 
-      const now = new Date().toISOString();
-      const id = crypto.randomUUID();
-      const newCard: DbCard = {
+  fetchCards: async (query) => {
 
-        id,
-        cardNumber: card.cardNumber,
-        expiryDate: card.expiryDate,
-        ccv: card.ccv,
-        isDeleted: card.isDeleted ?? false,
-        createdAt: now,
-        updatedAt: null,
-      };
+    const cards = await cardRepository.getAll(query);
+    set({ cards: cards.map(toCardResponse) });
+  },
 
-      await cardRepository.insert(
-        newCard,
-      );
+  addCard: async (card) => {
 
-      await syncQueueRepository.add({
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const newCard: DbCard = {
+      id,
+      cardNumber: card.cardNumber,
+      expiryDate: card.expiryDate,
+      ccv: card.ccv,
+      isDeleted: card.isDeleted ?? false,
+      createdAt: now,
+      updatedAt: null,
+    };
 
-        entity: 'card',
+    await cardRepository.insert(newCard);
 
-        entityId: id,
+    await syncQueueRepository.add({
+      entity: 'card',
+      entityId: id,
+      operation: 'create',
+      createdAt: now,
+      payload: {
+        cardNumber: newCard.cardNumber,
+        expiryDate: newCard.expiryDate,
+        ccv: newCard.ccv,
+        isDeleted: newCard.isDeleted
+      },
 
-        operation: 'create',
+    });
 
-        createdAt: now,
+    await get().fetchCards();
+  },
 
-        payload: {
-          cardNumber: newCard.cardNumber,
-          expiryDate: newCard.expiryDate,
-          ccv: newCard.ccv,
-          isDeleted: newCard.isDeleted,
-        },
+  updateCard: async (id, changes) => {
+    const currentCards = await cardRepository.getAll();
+    const currentCard = currentCards.find(card => card.id === id);
 
-      });
+    if (!currentCard) {
+      throw new Error(`Card not found`);
+    }
 
-      await get().fetchCards();
-    },
+    const updatedAt = new Date().toISOString();
 
-    updateCard: async (id, changes,) => {
+    const updatedCard = {
+      ...currentCard,
+      ...changes,
+      updatedAt
+    };
 
-      const currentCards = await cardRepository.getAll();
+    await cardRepository.update(id, {
+      cardNumber: updatedCard.cardNumber,
+      expiryDate: updatedCard.expiryDate,
+      ccv: updatedCard.ccv,
+      isDeleted: updatedCard.isDeleted,
+      updatedAt: updatedCard.updatedAt,
+    });
 
-      const currentCard = currentCards.find(card => card.id === id);
-
-      if (!currentCard) {
-        throw new Error(`Card not found`);
-      }
-
-      const updatedCard = {
-        ...currentCard,
-        ...changes,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await cardRepository.update(id, {
+    await syncQueueRepository.upsertCardUpdate({
+      entity: 'card',
+      entityId: id,
+      operation: 'update',
+      createdAt: updatedCard.updatedAt ?? new Date().toISOString(),
+      payload: {
         cardNumber: updatedCard.cardNumber,
         expiryDate: updatedCard.expiryDate,
         ccv: updatedCard.ccv,
-        isDeleted: updatedCard.isDeleted,
-        updatedAt: updatedCard.updatedAt,
-      });
+        isDeleted: updatedCard.isDeleted
+      },
+    });
 
-      await syncQueueRepository.upsertCardUpdate({
-        entity: 'card',
-        entityId: id,
-        operation: 'update',
-        createdAt: updatedCard.updatedAt ?? new Date().toISOString(),
-        payload: {
-          cardNumber: updatedCard.cardNumber,
-          expiryDate: updatedCard.expiryDate,
-          ccv: updatedCard.ccv,
-          isDeleted: updatedCard.isDeleted
-        },
-      });
+    await get().fetchCards();
+  },
 
-      await get().fetchCards();
-    },
+  deleteCard: async (id,) => {
+    await cardRepository.delete(id,);
+    await syncQueueRepository.upsertCardDelete(id,);
+    await get().fetchCards();
+  },
 
-    deleteCard: async (id,) => {
-
-      await cardRepository.delete(id,);
-
-      await syncQueueRepository.upsertCardDelete(id,);
-
-      await get().fetchCards();
-    },
-  }),
+  sync: async () => {
+    await syncService.sync();
+    await get().fetchCards();
+  },
+})
 );
