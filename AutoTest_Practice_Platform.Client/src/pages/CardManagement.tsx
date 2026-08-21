@@ -10,6 +10,7 @@ import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
 import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
+import { useNetworkStore } from '@/store/useNetworkStore';
 
 export const CardManagement = () => {
   // const [cards, setCards] = useState<CardResponse[]>([]);
@@ -26,6 +27,9 @@ export const CardManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ cardNumber: '', expiryDate: '', ccv: '', isDeleted: false });
+
+  // 网络状态
+  const isOnline = useNetworkStore((state) => state.isOnline);
 
   // 计算默认有效期：当前时间推后 5 年，格式为 MM/YY
   const getDefaultExpiryDate = () => {
@@ -158,6 +162,9 @@ export const CardManagement = () => {
   };
 
   const handleRefresh = async () => {
+    if (!isOnline) {
+      return toast.error('当前离线，无法同步');
+    }
     try {
       await refreshFromServer();
       toast.success('同步成功');
@@ -189,7 +196,7 @@ export const CardManagement = () => {
         </div>
         <Button onClick={handleFetchCards} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Search className="w-4 h-4 mr-2" /> 检索</Button>
         <Button onClick={handleReset} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 重置</Button>
-        <Button onClick={handleRefresh} disabled={!navigator.onLine} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 同步</Button>
+        <Button onClick={handleRefresh} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 同步</Button>
         <Label className="text-zinc-400 text-sm ml-auto">共 {cards.length} 张卡片</Label>
       </div>
 

@@ -8,7 +8,7 @@ import { useNetworkStore } from './store/useNetworkStore';
 function App() {
   const initializeNetwork = useNetworkStore((state) => state.initialize);
 
-  useEffect(() => { initializeNetwork(); }, [initializeNetwork]);
+  useEffect(() => { return initializeNetwork(); }, [initializeNetwork]);
 
   return (
     <>
