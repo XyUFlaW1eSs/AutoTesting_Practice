@@ -10,12 +10,13 @@ import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
 import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
+import { syncService } from '@/api/SyncService';
 
 export const CardManagement = () => {
   // const [cards, setCards] = useState<CardResponse[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
 
-  const { cards, isLoading, initialize, refreshFromServer, fetchCards, addCard, updateCard, deleteCard } = useCardStore();
+  const { cards, isLoading, initialize, fetchCards, addCard, updateCard, deleteCard } = useCardStore();
 
   // 搜索参数
   const [searchCardNumber, setSearchCardNumber] = useState('');
@@ -158,17 +159,7 @@ export const CardManagement = () => {
   };
 
   const handleRefresh = async () => {
-    try {
-      await refreshFromServer();
-      await fetchCards({
-        cardNumber: searchCardNumber.trim() || undefined,
-        expiryDate: searchExpiry.trim() || undefined,
-        isDeleted: filterDeleted ?? undefined,
-      });
-      toast.success('同步成功');
-    } catch {
-      toast.error('同步失败，请检查网络或稍后重试');
-    }
+    await syncService.sync();
   };
 
   return (

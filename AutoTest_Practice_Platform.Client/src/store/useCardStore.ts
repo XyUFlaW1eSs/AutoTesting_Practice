@@ -1,13 +1,8 @@
 import { create } from 'zustand';
-
 import { cardService } from '@/api/cardService';
-
 import type { CardQuery, CardResponse, CreateCardRequest, UpdateCardRequest, } from '@/api/types';
-
 import { cardRepository } from '@/db/repositories/CardRepository';
-
 import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
-
 import type { DbCard } from '@/db/models';
 
 function toDbCard(card: CardResponse): DbCard {
@@ -42,7 +37,6 @@ function toCardResponse(card: DbCard): CardResponse {
 
 interface CardStore {
   cards: CardResponse[];
-
   isLoading: boolean;
 
   initialize: () => Promise<void>;
@@ -50,7 +44,6 @@ interface CardStore {
   addCard: (card: CreateCardRequest,) => Promise<void>;
   updateCard: (id: string, changes: UpdateCardRequest,) => Promise<void>;
   deleteCard: (id: string,) => Promise<void>;
-  refreshFromServer: () => Promise<void>;
 }
 
 
@@ -186,14 +179,6 @@ export const useCardStore = create<CardStore>(
 
       await syncQueueRepository.upsertCardDelete(id,);
 
-      await get().fetchCards();
-    },
-
-    refreshFromServer: async () => {
-      if (!navigator.onLine) return;
-
-      const serverCards = await cardService.getCards();
-      await cardRepository.bulkPut(serverCards.map(toDbCard),);
       await get().fetchCards();
     },
   }),
