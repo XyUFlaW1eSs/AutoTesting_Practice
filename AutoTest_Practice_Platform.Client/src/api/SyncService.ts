@@ -3,22 +3,8 @@ import { cardRepository } from '@/db/repositories/CardRepository';
 import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
 import type { DbCard } from '@/db/models';
 import type { CardResponse } from '@/api/types';
-import type { SyncQueueItem } from '@/db/syncModels';
 
 let syncing = false;
-
-const isQueueUnchanged = (original: SyncQueueItem, current: SyncQueueItem | undefined): boolean => {
-  if (!current) return false;
-
-  return (
-    current.id === original.id &&
-    current.entity === original.entity &&
-    current.entityId === original.entityId &&
-    current.operation === original.operation &&
-    current.createdAt === original.createdAt &&
-    JSON.stringify(current.payload) === JSON.stringify(original.payload)
-  );
-};
 
 const toDbCard = (card: CardResponse): DbCard => ({
   id: card.id,
@@ -32,7 +18,8 @@ const toDbCard = (card: CardResponse): DbCard => ({
 
 export const syncService = {
   /**
-   * 执行一次完整同步：先 Push 本地待同步操作，再 Pull 服务器最新数据。
+   * 执行一次完整同步：比较本地与服务器数据，完成必要的服务器写入，
+   * 最后重新拉取服务器有效数据并重建 IndexedDB。
    */
   async sync(): Promise<void> {
     if (syncing || !navigator.onLine) return;
@@ -40,159 +27,100 @@ export const syncService = {
     syncing = true;
 
     try {
-      await this.push();
-      await this.pull();
+      const localCards = await cardRepository.getAll();
+      const queue = await syncQueueRepository.getAll();
+      const serverCards = await cardService.getCards({ isDeleted: false });
+
+      await this.reconcile(localCards, serverCards, queue);
+      await this.refreshLocalData();
     } finally {
       syncing = false;
     }
   },
 
   /**
-   * 将 IndexedDB Sync Queue 中的本地操作同步到服务器。
+   * 比较本地与服务器数据，并将本地发生过的变更同步到服务器。
    */
-  async push(): Promise<void> {
-    const queue = await syncQueueRepository.getAll();
-
-    for (const item of queue) {
-      try {
-        await this.process(item);
-      } catch (error) {
-        console.error('Card sync failed:', item, error);
-        break;
-      }
-    }
-  },
-
-  /**
-   * 将服务器最新数据合并到 IndexedDB。
-   *
-   * 有本地 Pending Queue 的 Card 以本地数据为准，
-   * 避免 Pull 时覆盖尚未同步完成的离线新增、修改或删除。
-   */
-  async pull(): Promise<void> {
-    const [serverCards, localCards, queue] = await Promise.all([
-      cardService.getCards(),
-      cardRepository.getAll(),
-      syncQueueRepository.getAll(),
-    ]);
-
+  async reconcile(
+    localCards: DbCard[],
+    serverCards: CardResponse[],
+    queue: Awaited<ReturnType<typeof syncQueueRepository.getAll>>,
+  ): Promise<void> {
+    const localMap = new Map(localCards.map(card => [card.id, card]));
+    const serverMap = new Map(serverCards.map(card => [card.id, card]));
     const pendingIds = new Set(
       queue
         .filter(item => item.entity === 'card')
         .map(item => item.entityId),
     );
 
-    const serverIds = new Set(serverCards.map(card => card.id));
+    for (const localCard of localCards) {
+      const serverCard = serverMap.get(localCard.id);
+      const isPending = pendingIds.has(localCard.id);
 
-    const cardsToPut = serverCards
-      .filter(card => !pendingIds.has(card.id))
-      .map(toDbCard);
+      if (!serverCard) {
+        if (localCard.isDeleted) {
+          continue;
+        }
 
-    if (cardsToPut.length > 0) {
-      await cardRepository.bulkPut(cardsToPut);
+        await cardService.createCard({
+          id: localCard.id,
+          cardNumber: localCard.cardNumber,
+          expiryDate: localCard.expiryDate,
+          ccv: localCard.ccv,
+          isDeleted: false,
+        });
+
+        continue;
+      }
+
+      if (!isPending) {
+        continue;
+      }
+
+      if (localCard.isDeleted) {
+        await cardService.deleteCard(localCard.id);
+        continue;
+      }
+
+      await cardService.updateCard(localCard.id, {
+        cardNumber: localCard.cardNumber,
+        expiryDate: localCard.expiryDate,
+        ccv: localCard.ccv,
+        isDeleted: false,
+      });
     }
 
-    const cardsToRemove = localCards.filter(
-      card => !serverIds.has(card.id) && !pendingIds.has(card.id),
-    );
-
-    for (const card of cardsToRemove) {
-      await cardRepository.remove(card.id);
+    for (const serverCard of serverCards) {
+      if (!localMap.has(serverCard.id)) {
+        await cardRepository.bulkPut([toDbCard(serverCard)]);
+      }
     }
   },
 
   /**
-   * 处理单条 Sync Queue 操作。
+   * 重新读取服务器有效数据，并让 IndexedDB 与服务器最终状态保持一致。
    */
-  async process(item: SyncQueueItem): Promise<void> {
-    if (item.entity !== 'card') return;
+  async refreshLocalData(): Promise<void> {
+    const serverCards = await cardService.getCards({ isDeleted: false });
 
-    if (item.operation === 'create') {
-      if (!item.payload) {
-        throw new Error('Create sync payload missing.');
+    const localCards = await cardRepository.getAll();
+    const serverIds = new Set(serverCards.map(card => card.id));
+
+    for (const localCard of localCards) {
+      if (!serverIds.has(localCard.id)) {
+        await cardRepository.remove(localCard.id);
       }
-
-      const originalQueue = {
-        ...item,
-        payload: { ...item.payload },
-      };
-
-      const response = await cardService.createCard({
-        id: item.entityId,
-        cardNumber: item.payload.cardNumber,
-        expiryDate: item.payload.expiryDate,
-        ccv: item.payload.ccv,
-        isDeleted: item.payload.isDeleted,
-      });
-
-      const currentQueue = item.id !== undefined
-        ? await syncQueueRepository.getById(item.id)
-        : undefined;
-
-      if (!isQueueUnchanged(originalQueue, currentQueue)) {
-        console.info('Card was modified during Create sync. Keep the latest local version and Queue.');
-        return;
-      }
-
-      await cardRepository.bulkPut([toDbCard(response)]);
-
-      if (item.id !== undefined) {
-        await syncQueueRepository.remove(item.id);
-      }
-
-      return;
     }
 
-    if (item.operation === 'update') {
-      if (!item.payload) {
-        throw new Error('Update sync payload missing.');
-      }
-
-      const originalQueue = {
-        ...item,
-        payload: { ...item.payload },
-      };
-
-      const response = await cardService.updateCard(item.entityId, {
-        cardNumber: item.payload.cardNumber,
-        expiryDate: item.payload.expiryDate,
-        ccv: item.payload.ccv,
-        isDeleted: item.payload.isDeleted,
-      });
-
-      const currentQueue = item.id !== undefined
-        ? await syncQueueRepository.getById(item.id)
-        : undefined;
-
-      if (!isQueueUnchanged(originalQueue, currentQueue)) {
-        console.info('Card was modified during Update sync. Keep the latest local version and Queue.');
-        return;
-      }
-
-      await cardRepository.bulkPut([toDbCard(response)]);
-
-      if (item.id !== undefined) {
-        await syncQueueRepository.remove(item.id);
-      }
-
-      return;
+    if (serverCards.length > 0) {
+      await cardRepository.bulkPut(serverCards.map(toDbCard));
     }
 
-    if (item.operation === 'delete') {
-      const originalQueue = { ...item };
+    const queue = await syncQueueRepository.getAll();
 
-      await cardService.deleteCard(item.entityId);
-
-      const currentQueue = item.id !== undefined
-        ? await syncQueueRepository.getById(item.id)
-        : undefined;
-
-      if (!isQueueUnchanged(originalQueue, currentQueue)) {
-        console.info('Card was modified during Delete sync. Keep the latest Queue.');
-        return;
-      }
-
-      if (item.id !== undefined) {
+    for (const item of queue) {
+      if (item.entity === 'card' && item.id !== undefined) {
         await syncQueueRepository.remove(item.id);
       }
     }
