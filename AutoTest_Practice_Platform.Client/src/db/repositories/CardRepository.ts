@@ -72,4 +72,12 @@ export const cardRepository = {
   async bulkPut(cards: DbCard[]): Promise<void> {
     await db.cards.bulkPut(cards,);
   },
+
+  /**
+   * 物理删除指定的本地卡片，仅用于同步服务器数据后的本地数据清理。
+   */
+  async bulkDelete(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await db.cards.bulkDelete(ids);
+  }
 };

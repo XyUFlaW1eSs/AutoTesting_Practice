@@ -75,22 +75,31 @@ export const syncService = {
   },
 
   /**
-   * 获取服务器最新数据并合并到 IndexedDB，保留仍存在同步 Queue 的本地数据。
+   * 获取服务器最新数据，与仍待同步的本地数据合并，并清理已经不存在于服务器且没有待同步任务的本地数据。
    */
   async refreshServerData(): Promise<void> {
     const remoteCards = await cardService.getCards();
     const queue = await syncQueueRepository.getAll();
-    const pendingCardIds = new Set(queue.filter(item => item.entity === 'card').map(item => item.entityId));
     const localCards = await cardRepository.getAll();
 
-    const mergedCards = new Map(localCards.map(card => [card.id, card]));
+    const pendingCardIds = new Set(
+      queue
+        .filter(item => item.entity === 'card')
+        .map(item => item.entityId)
+    );
 
-    for (const remoteCard of remoteCards) {
-      if (!pendingCardIds.has(remoteCard.id)) {
-        mergedCards.set(remoteCard.id, toDbCard(remoteCard));
-      }
-    }
+    const remoteCardIds = new Set(remoteCards.map(card => card.id));
 
-    await cardRepository.bulkPut(Array.from(mergedCards.values()));
+    const cardsToDelete = localCards
+      .filter(card => !remoteCardIds.has(card.id) && !pendingCardIds.has(card.id))
+      .map(card => card.id);
+
+    await cardRepository.bulkDelete(cardsToDelete);
+
+    const cardsToPut = remoteCards
+      .filter(card => !pendingCardIds.has(card.id))
+      .map(toDbCard);
+
+    await cardRepository.bulkPut(cardsToPut);
   },
 };

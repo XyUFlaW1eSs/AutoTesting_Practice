@@ -8,12 +8,12 @@ export interface SyncQueueItem {
   entityId: string;
   operation: SyncOperation;
   createdAt: string;
-  payload?: {
+  payload: {
     cardNumber: string;
     expiryDate: string;
     ccv: string;
     isDeleted: boolean;
     createdAt: string;
     updatedAt: string | null;
-  };
+  } | null;
 }

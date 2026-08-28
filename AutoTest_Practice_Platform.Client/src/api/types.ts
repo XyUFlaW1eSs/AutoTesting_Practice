@@ -198,5 +198,5 @@ export interface UpdateCardRequest {
   ccv: string;
   isDeleted: boolean;
   createdAt?: string;
-  updatedAt?: string;
+  updatedAt?: string | null;
 }
