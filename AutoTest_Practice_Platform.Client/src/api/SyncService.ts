@@ -1,8 +1,9 @@
 import { cardService } from '@/api/cardService';
 import { cardRepository } from '@/db/repositories/CardRepository';
 import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
-import type { DbCard, SyncQueueItem } from '@/db/models';
-import type { CardResponse } from '@/api/types';
+import type { DbCard } from '@/db/models';
+import type { SyncQueueItem } from '@/db/syncModels';
+import type { CardResponse, CreateCardRequest, UpdateCardRequest } from '@/api/types';
 
 const toDbCard = (card: CardResponse): DbCard => ({
   id: card.id,
@@ -26,13 +27,15 @@ export const syncService = {
     for (const item of queue) {
       try {
         await this.processQueueItem(item);
-        await syncQueueRepository.remove(item.id)
+        if(item.id != undefined){
+          await syncQueueRepository.remove(item.id)
+        }
       } catch (error) {
         console.error(`Failed to sync queue item ${item.id}:`, error);
       }
     }
 
-    await this.refreshLocalData();
+    await this.refreshServerData();
   },
 
   /**
@@ -40,12 +43,28 @@ export const syncService = {
    */
   async processQueueItem(item: SyncQueueItem): Promise<void> {
     if (item.operation === 'create') {
-      await cardService.createCard(item.payload);
+      const payload: CreateCardRequest = {
+        id: item.entityId,
+        cardNumber: item.payload!.cardNumber,
+        expiryDate: item.payload!.expiryDate,
+        ccv: item.payload!.ccv,
+        isDeleted: item.payload!.isDeleted,
+        createdAt: item.payload!.createdAt,
+      };
+      await cardService.createCard(payload);
       return;
     }
 
     if (item.operation === 'update') {
-      await cardService.updateCard(item.entityId, item.payload);
+      const payload: UpdateCardRequest = {
+        cardNumber: item.payload!.cardNumber,
+        expiryDate: item.payload!.expiryDate,
+        ccv: item.payload!.ccv,
+        isDeleted: item.payload!.isDeleted,
+        createdAt: item.payload!.createdAt,
+        updatedAt: item.payload!.updatedAt,
+      };
+      await cardService.updateCard(item.entityId, payload);
       return;
     }
 
