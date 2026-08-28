@@ -17,9 +17,7 @@ const toDbCard = (card: CardResponse): DbCard => ({
 
 export const syncService = {
     /**
-   * 执行所有待同步 Queue。
-   * 单条 Queue 同步成功后立即删除，失败则保留并继续处理其他 Queue。
-   * 同步完成后使用服务器最新数据更新 IndexedDB，但不会清空本地未同步数据。
+   * 执行待同步 Queue，并在成功同步后使用服务器数据与本地未同步数据合并。
    */
   async sync(): Promise<void> {
     const queue = await syncQueueRepository.getAll();
@@ -77,15 +75,22 @@ export const syncService = {
   },
 
   /**
-   * 重新读取服务器有效数据，并让 IndexedDB 与服务器最终状态保持一致。
+   * 获取服务器最新数据并合并到 IndexedDB，保留仍存在同步 Queue 的本地数据。
    */
   async refreshServerData(): Promise<void> {
     const remoteCards = await cardService.getCards();
+    const queue = await syncQueueRepository.getAll();
+    const pendingCardIds = new Set(queue.filter(item => item.entity === 'card').map(item => item.entityId));
+    const localCards = await cardRepository.getAll();
 
-    if (remoteCards.length === 0) {
-      return;
+    const mergedCards = new Map(localCards.map(card => [card.id, card]));
+
+    for (const remoteCard of remoteCards) {
+      if (!pendingCardIds.has(remoteCard.id)) {
+        mergedCards.set(remoteCard.id, toDbCard(remoteCard));
+      }
     }
 
-    await cardRepository.bulkPut(remoteCards.map(toDbCard));
+    await cardRepository.bulkPut(Array.from(mergedCards.values()));
   },
 };
