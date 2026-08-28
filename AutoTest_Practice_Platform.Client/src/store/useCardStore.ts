@@ -84,10 +84,11 @@ export const useCardStore = create<CardStore>((set, get) => ({
     set({ cards: cards.map(toCardResponse) });
   },
 
-  addCard: async (card) => {
+  addCard: async (card: CreateCardRequest) => {
 
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
+
     const newCard: DbCard = {
       id,
       cardNumber: card.cardNumber,
@@ -105,20 +106,14 @@ export const useCardStore = create<CardStore>((set, get) => ({
       entityId: id,
       operation: 'create',
       createdAt: now,
-      payload: {
-        cardNumber: newCard.cardNumber,
-        expiryDate: newCard.expiryDate,
-        ccv: newCard.ccv,
-        isDeleted: newCard.isDeleted,
-        createdAt: newCard.createdAt,
-        updatedAt: newCard.updatedAt,
-      },
+      payload: newCard,
     });
 
+    await get().sync();
     await get().fetchCards();
   },
 
-  updateCard: async (id, changes) => {
+  updateCard: async (id: string, changes: UpdateCardRequest) => {
     const currentCards = await cardRepository.getAll();
     const currentCard = currentCards.find(card => card.id === id);
 
@@ -126,48 +121,41 @@ export const useCardStore = create<CardStore>((set, get) => ({
       throw new Error(`Card not found`);
     }
 
-    const now = new Date().toISOString();
-
-    const updatedCard = {
-      ...currentCard,
-      ...changes,
-      now
-    };
+    const updatedAt = new Date().toISOString();
 
     await cardRepository.update(id, {
-      cardNumber: updatedCard.cardNumber,
-      expiryDate: updatedCard.expiryDate,
-      ccv: updatedCard.ccv,
-      isDeleted: updatedCard.isDeleted,
-      updatedAt: updatedCard.updatedAt,
+      ...changes,
+      updatedAt
     });
+
+    const updateCard: DbCard = {
+      ...currentCard,
+      ...changes,
+      updatedAt
+    }
 
     await syncQueueRepository.upsertCardUpdate({
       entity: 'card',
       entityId: id,
       operation: 'update',
       createdAt: new Date().toISOString(),
-      payload: {
-        cardNumber: updatedCard.cardNumber,
-        expiryDate: updatedCard.expiryDate,
-        ccv: updatedCard.ccv,
-        isDeleted: updatedCard.isDeleted,
-        updatedAt: updatedCard.updatedAt,
-      },
+      payload: updateCard,
     });
 
+    await get().sync();
     await get().fetchCards();
   },
 
   deleteCard: async (id) => {
     await cardRepository.delete(id);
     await syncQueueRepository.upsertCardDelete(id);
+
+    await get().sync();
     await get().fetchCards();
   },
 
   sync: async () => {
     await syncService.sync();
-    await get().fetchCards();
   },
 })
 );
