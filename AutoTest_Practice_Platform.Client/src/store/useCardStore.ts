@@ -159,9 +159,9 @@ export const useCardStore = create<CardStore>((set, get) => ({
     await get().fetchCards();
   },
 
-  deleteCard: async (id,) => {
-    await cardRepository.delete(id,);
-    await syncQueueRepository.upsertCardDelete(id,);
+  deleteCard: async (id) => {
+    await cardRepository.delete(id);
+    await syncQueueRepository.upsertCardDelete(id);
     await get().fetchCards();
   },
 

@@ -16,7 +16,7 @@ export const CardManagement = () => {
   // const [cards, setCards] = useState<CardResponse[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
 
-  const { cards, isLoading, initialize, fetchCards, addCard, updateCard, deleteCard } = useCardStore();
+  const { cards, isLoading, initialize, fetchCards, addCard, updateCard, deleteCard, sync } = useCardStore();
 
   // 搜索参数
   const [searchCardNumber, setSearchCardNumber] = useState('');
@@ -99,9 +99,6 @@ export const CardManagement = () => {
     setFilterDeleted(null)
     // setTimeout(() => fetchCards(), 0);
     try {
-      // 修改：
-      // Reset 时明确查询全部本地 Card。
-      // 不依赖 React state 更新时序。
       await fetchCards({});
     } catch {
       toast.error(
@@ -160,7 +157,7 @@ export const CardManagement = () => {
 
   const handleRefresh = async () => {
     try {
-      await syncService.sync();
+      await useCardStore.sync();
 
       await fetchCards({
         cardNumber: searchCardNumber.trim() || undefined,

@@ -188,6 +188,8 @@ export interface CreateCardRequest {
   ccv: string;
   isDeleted?: boolean;
   id?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UpdateCardRequest {
@@ -195,4 +197,6 @@ export interface UpdateCardRequest {
   expiryDate: string;
   ccv: string;
   isDeleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

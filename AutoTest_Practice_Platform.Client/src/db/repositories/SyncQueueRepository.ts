@@ -1,126 +1,144 @@
 import { db } from '../database';
 import type { SyncQueueItem } from '../syncModels';
 
+const CARD_ENTITY = 'card';
+
 export const syncQueueRepository = {
 
-  async add(item: SyncQueueItem,): Promise<number> {
-    return await db.syncQueue.add(item,);
-  },
-
   async getAll(): Promise<SyncQueueItem[]> {
-    return await db.syncQueue
-      .orderBy('createdAt')
-      .toArray();
+    return await db.syncQueue.orderBy('createdAt').toArray();
   },
 
-  async getById(id: number,): Promise<SyncQueueItem | undefined> {
-    return await db.syncQueue.get(id,);
+  async add(item: SyncQueueItem,): Promise<void> {
+    const queue = await db.syncQueue.toArray();
+
+    // 创建卡片时，如果同一张卡片已经存在 create Queue，则直接更新原 Queue。
+    const existingCreate = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === item.entityId && x.operation === 'create',
+    );
+
+    if (item.operation === 'create' && existingCreate) {
+      await db.syncQueue.update(existingCreate.id, {
+        createdAt: item.createdAt,
+        payload: item.payload,
+      });
+      return;
+    }
+
+    // create + delete 表示这张卡片从未真正同步到服务器，因此无需向服务器发送任何操作。
+    if (item.operation === 'delete') {
+      const existingCreateQueue = queue.find(
+        x => x.entity === CARD_ENTITY && x.entityId === item.entityId && x.operation === 'create',
+      );
+
+      if (existingCreateQueue) {
+        await db.syncQueue.delete(existingCreateQueue.id);
+        return;
+      }
+    }
+
+    await db.syncQueue.add(item);
+  },
+
+  async upsertCardUpdate(item: SyncQueueItem): Promise<void> {
+
+    const queue = await db.syncQueue.toArray();
+
+    const existingCreate = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === item.entityId && x.operation === 'create',
+    );
+
+    // create + update：仍然只需要 create，但 payload 必须更新成最新 Card。
+    if (existingCreate) {
+      await db.syncQueue.update(existingCreate.id, {
+        payload: item.payload,
+      });
+      return;
+    }
+
+    const existingUpdate = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === item.entityId && x.operation === 'update',
+    );
+
+    // update + update：保留一个 update Queue，并使用最新的 Card 数据。
+    if (existingUpdate) {
+      await db.syncQueue.update(existingUpdate.id, {
+        createdAt: item.createdAt,
+        payload: item.payload,
+      });
+      return;
+    }
+
+    const existingDelete = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === item.entityId && x.operation === 'delete',
+    );
+
+    // 如果当前已经存在 delete Queue，不应该再追加 update。
+    if (existingDelete) {
+      return;
+    }
+
+    await db.syncQueue.add(item);
+  },
+
+  async upsertCardDelete(entityId: string): Promise<void> {
+    const queue = await db.syncQueue.toArray();
+
+    const existingCreate = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === entityId && x.operation === 'create',
+    );
+
+    // create + delete：卡片从未同步到服务器，直接取消 create Queue。
+    if (existingCreate) {
+      await db.syncQueue.delete(existingCreate.id);
+      return;
+    }
+
+    const existingDelete = queue.find(
+      x => x.entity === CARD_ENTITY && x.entityId === entityId && x.operation === 'delete',
+    );
+
+    // delete + delete：已经存在删除任务，不需要重复创建。
+    if (existingDelete) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    const deleteItem: Omit<SyncQueueItem, 'id'> = {
+      entity: CARD_ENTITY,
+      entityId,
+      operation: 'delete',
+      createdAt: now,
+      payload: null,
+    };
+
+    // update + delete：删除操作覆盖之前的 update。
+    const existingUpdate = queue.find(
+      x =>
+        x.entity === CARD_ENTITY &&
+        x.entityId === entityId &&
+        x.operation === 'update',
+    );
+
+    if (existingUpdate) {
+      await db.syncQueue.update(existingUpdate.id, {
+        operation: 'delete',
+        createdAt: now,
+        payload: null,
+      });
+      return;
+    }
+
+    await db.syncQueue.add(deleteItem as SyncQueueItem);
   },
 
   async remove(id: number,): Promise<void> {
     await db.syncQueue.delete(id,);
   },
 
-  async upsertCardUpdate(
-    item: SyncQueueItem,
-  ): Promise<void> {
-
-    const queue =
-      await db.syncQueue
-        .where('entityId')
-        .equals(item.entityId)
-        .toArray();
-
-    const createItem =
-      queue.find(x =>
-        x.entity === 'card' &&
-        x.operation === 'create',
-      );
-
-
-    if (createItem?.id !== undefined) {
-      await db.syncQueue.update(
-        createItem.id,
-        {
-          payload: item.payload,
-          createdAt: item.createdAt,
-        },
-      );
-      return;
-    }
-
-    const updateItem =
-      queue.find(
-        x =>
-          x.entity === 'card' &&
-          x.operation === 'update',
-      );
-
-    if (updateItem?.id !== undefined) {
-      await db.syncQueue.update(
-        updateItem.id,
-        {
-          payload: item.payload,
-          createdAt: item.createdAt,
-        },
-      );
-
-      return;
-    }
-
-    await db.syncQueue.add(item,);
-  },
-
-  async upsertCardDelete(
-    entityId: string,
-  ): Promise<void> {
-
-    const queue =
-      await db.syncQueue
-        .where('entityId')
-        .equals(entityId)
-        .toArray();
-
-    const createItem =
-      queue.find(x =>
-        x.entity === 'card' &&
-        x.operation === 'create',
-      );
-
-
-    if (createItem?.id !== undefined) {
-      await db.syncQueue.delete(createItem.id,);
-      return;
-    }
-
-    const updateItem =
-      queue.find(x =>
-        x.entity === 'card' &&
-        x.operation === 'update',
-      );
-
-
-    if (updateItem?.id !== undefined) {
-      await db.syncQueue.delete(updateItem.id,);
-    }
-
-    const deleteItem =
-      queue.find(
-        x =>
-          x.entity === 'card' &&
-          x.operation === 'delete',
-      );
-
-    if (deleteItem) {
-      return;
-    }
-
-    await db.syncQueue.add({
-      entity: 'card',
-      entityId,
-      operation: 'delete',
-      createdAt: new Date().toISOString(),
-    });
+  async clear(): Promise<void> {
+    await db.syncQueue.clear();
   },
 
 };
