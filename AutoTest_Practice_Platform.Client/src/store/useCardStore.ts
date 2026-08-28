@@ -110,7 +110,6 @@ export const useCardStore = create<CardStore>((set, get) => ({
     });
 
     await get().sync();
-    await get().fetchCards();
   },
 
   updateCard: async (id: string, changes: UpdateCardRequest) => {
@@ -143,7 +142,6 @@ export const useCardStore = create<CardStore>((set, get) => ({
     });
 
     await get().sync();
-    await get().fetchCards();
   },
 
   deleteCard: async (id) => {
@@ -151,11 +149,11 @@ export const useCardStore = create<CardStore>((set, get) => ({
     await syncQueueRepository.upsertCardDelete(id);
 
     await get().sync();
-    await get().fetchCards();
   },
 
   sync: async () => {
     await syncService.sync();
+    await get().fetchCards();
   },
 })
 );
