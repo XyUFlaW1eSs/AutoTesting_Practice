@@ -11,7 +11,7 @@ namespace AutoTest_Practice_Platform.API.Controllers
 {
     [ApiController]
     [Route("api/cards")]
-    [Authorize]
+    [AllowAnonymous]
     public sealed class CardsController(AppDbContext db) : ControllerBase
     {
 
