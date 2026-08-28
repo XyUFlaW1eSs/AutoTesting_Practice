@@ -4,7 +4,7 @@ import type { DbCard, } from '../models';
 
 export const cardRepository = {
 
-  async getAll(query?: CardQuery,): Promise<DbCard[]> {
+  async getAll(query?: CardQuery): Promise<DbCard[]> {
     let cards = await db.cards.toArray();
 
     if (query?.cardNumber?.trim()) {
@@ -42,21 +42,20 @@ export const cardRepository = {
     return (await db.cards.count()) === 0;
   },
 
-  async insert(card: DbCard,): Promise<void> {
+  async insert(card: DbCard): Promise<void> {
     await db.cards.add(card,);
   },
 
-  async update(id: string, changes: Partial<DbCard>,): Promise<void> {
+  async update(id: string, changes: Partial<DbCard>): Promise<void> {
     await db.cards.update(
       id,
       {
-        ...changes,
-        updatedAt: new Date().toISOString(),
+        ...changes
       },
     );
   },
 
-  async delete(id: string,): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.cards.update(
       id,
       {
@@ -70,7 +69,7 @@ export const cardRepository = {
     await db.cards.delete(id);
   },
 
-  async bulkPut(cards: DbCard[],): Promise<void> {
+  async bulkPut(cards: DbCard[]): Promise<void> {
     await db.cards.bulkPut(cards,);
   },
 };
