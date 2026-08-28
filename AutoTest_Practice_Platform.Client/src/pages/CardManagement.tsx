@@ -81,13 +81,45 @@ export const CardManagement = () => {
     }
   };
 
-  // 复制前端根据本地 Card 数据生成的格式化信息。
-  const handleCopy = (formattedText: string) => {
-    navigator.clipboard.writeText(formattedText).then(() => {
-      toast.success('卡片信息已复制到剪贴板！');
-    }).catch(() => {
-      toast.error('复制失败，请检查浏览器权限');
-    });
+  /**
+   * 将格式化后的卡片文本复制到剪贴板，兼容 HTTP 环境下的 Windows 和 iPhone Safari。
+   */
+  const handleCopy = async (formattedText: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(formattedText);
+        toast.success('复制成功');
+        return;
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = formattedText;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+
+      const execCommand = document.execCommand.bind(document) as (
+        commandId: string,
+        showUI?: boolean,
+        value?: string
+      ) => boolean;
+
+      const success = execCommand('copy');
+      document.body.removeChild(textarea);
+
+      if (success) {
+        toast.success('复制成功');
+      } else {
+        toast.error('复制失败');
+      }
+    } catch {
+      toast.error('复制失败');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -129,12 +161,6 @@ export const CardManagement = () => {
   const handleRefresh = async () => {
     try {
       await sync();
-
-      await fetchCards({
-        cardNumber: searchCardNumber.trim() || undefined,
-        expiryDate: searchExpiry.trim() || undefined,
-        isDeleted: filterDeleted ?? undefined,
-      });
       toast.success('同步完成');
     } catch {
       toast.error('同步失败');

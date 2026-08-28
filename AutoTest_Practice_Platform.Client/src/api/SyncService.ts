@@ -37,7 +37,7 @@ export const syncService = {
   },
 
   /**
-   * 根据 Queue 操作类型调用对应的 Card API。
+   * 根据 Queue 操作类型调用对应的 Card API，DELETE 目标不存在时视为操作已经达到最终状态。
    */
   async processQueueItem(item: SyncQueueItem): Promise<void> {
     if (item.operation === 'create') {
@@ -67,7 +67,12 @@ export const syncService = {
     }
 
     if (item.operation === 'delete') {
-      await cardService.deleteCard(item.entityId);
+      try {
+        await cardService.deleteCard(item.entityId);
+      } catch (error: any) {
+        if (error?.response?.status === 404) return;
+        throw error;
+      }
       return;
     }
 
