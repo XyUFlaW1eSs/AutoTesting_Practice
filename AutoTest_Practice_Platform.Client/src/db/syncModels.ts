@@ -13,7 +13,7 @@ export interface SyncQueueItem {
     expiryDate: string;
     ccv: string;
     isDeleted: boolean;
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt: string;
+    updatedAt: string | null;
   };
 }

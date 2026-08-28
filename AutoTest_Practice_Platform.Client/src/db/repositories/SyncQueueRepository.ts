@@ -3,6 +3,16 @@ import type { SyncQueueItem } from '../syncModels';
 
 const CARD_ENTITY = 'card';
 
+/**
+ * 获取 Queue 的持久化 ID，不存在时直接抛出异常。
+ */
+function getQueueId(item: SyncQueueItem): number {
+  if (item.id === undefined) {
+    throw new Error('Sync queue item is missing id');
+  }
+  return item.id;
+}
+
 export const syncQueueRepository = {
 
   async getAll(): Promise<SyncQueueItem[]> {
@@ -18,7 +28,7 @@ export const syncQueueRepository = {
     );
 
     if (item.operation === 'create' && existingCreate) {
-      await db.syncQueue.update(existingCreate.id, {
+      await db.syncQueue.update(getQueueId(existingCreate), {
         createdAt: item.createdAt,
         payload: item.payload,
       });
@@ -32,7 +42,7 @@ export const syncQueueRepository = {
       );
 
       if (existingCreateQueue) {
-        await db.syncQueue.delete(existingCreateQueue.id);
+        await db.syncQueue.delete(getQueueId(existingCreateQueue));
         return;
       }
     }
@@ -50,7 +60,7 @@ export const syncQueueRepository = {
 
     // create + update：仍然只需要 create，但 payload 必须更新成最新 Card。
     if (existingCreate) {
-      await db.syncQueue.update(existingCreate.id, {
+      await db.syncQueue.update(getQueueId(existingCreate), {
         payload: item.payload,
       });
       return;
@@ -62,7 +72,7 @@ export const syncQueueRepository = {
 
     // update + update：保留一个 update Queue，并使用最新的 Card 数据。
     if (existingUpdate) {
-      await db.syncQueue.update(existingUpdate.id, {
+      await db.syncQueue.update(getQueueId(existingUpdate), {
         createdAt: item.createdAt,
         payload: item.payload,
       });
@@ -90,7 +100,7 @@ export const syncQueueRepository = {
 
     // create + delete：卡片从未同步到服务器，直接取消 create Queue。
     if (existingCreate) {
-      await db.syncQueue.delete(existingCreate.id);
+      await db.syncQueue.delete(getQueueId(existingCreate));
       return;
     }
 
@@ -122,7 +132,7 @@ export const syncQueueRepository = {
     );
 
     if (existingUpdate) {
-      await db.syncQueue.update(existingUpdate.id, {
+      await db.syncQueue.update(getQueueId(existingUpdate), {
         operation: 'delete',
         createdAt: now,
         payload: null,
@@ -141,4 +151,10 @@ export const syncQueueRepository = {
     await db.syncQueue.clear();
   },
 
+  async getQueueId(item: SyncQueueItem): Promise<number> {
+    if (item.id === undefined) {
+      throw new Error('Sync queue item is missing id');
+    }
+    return item.id;
+  }
 };

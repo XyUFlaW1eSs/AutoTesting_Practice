@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-// import { cardService } from '../api/cardService';
 import { useCardStore } from '../store/useCardStore';
 import type { CardResponse } from '../api/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -10,11 +9,8 @@ import { Switch } from '../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from 'sonner';
 import { CreditCard, Search, RotateCcw, Copy, Trash2, Edit } from 'lucide-react';
-import { syncService } from '@/api/SyncService';
 
 export const CardManagement = () => {
-  // const [cards, setCards] = useState<CardResponse[]>([]);
-  // const [isLoading, setIsLoading] = useState(true);
 
   const { cards, isLoading, initialize, fetchCards, addCard, updateCard, deleteCard, sync } = useCardStore();
 
@@ -38,22 +34,6 @@ export const CardManagement = () => {
     return `${month}/${futureYear}`;
   };
 
-  // const fetchCards = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const params: any = {};
-  //     if (searchCardNumber.trim()) params.cardNumber = searchCardNumber.trim();
-  //     if (searchExpiry.trim()) params.expiryDate = searchExpiry.trim();
-  //     if (filterDeleted != null) params.isDeleted = filterDeleted;
-
-  //     const data = await cardService.getCards(params);
-  //     setCards(data || []);
-  //   } catch (error) {
-  //     toast.error('获取卡片列表失败');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   const handleFetchCards = async () => {
     try {
       await fetchCards({
@@ -81,11 +61,6 @@ export const CardManagement = () => {
     const initializeCards = async () => {
       try {
         await initialize();
-        await fetchCards({
-          cardNumber: searchCardNumber.trim() || undefined,
-          expiryDate: searchExpiry.trim() || undefined,
-          isDeleted: filterDeleted ?? undefined,
-        });
       } catch {
         toast.error('初始化卡片数据失败',);
       }
@@ -97,7 +72,6 @@ export const CardManagement = () => {
     setSearchCardNumber('');
     setSearchExpiry('');
     setFilterDeleted(null)
-    // setTimeout(() => fetchCards(), 0);
     try {
       await fetchCards({});
     } catch {
@@ -119,7 +93,6 @@ export const CardManagement = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('确定要删除这张卡片吗？')) return;
     try {
-      // await cardService.deleteCard(id);
       await deleteCard(id);
       toast.success('删除成功');
     } catch { toast.error('删除失败'); }
@@ -143,11 +116,9 @@ export const CardManagement = () => {
     }
     try {
       if (editingId) {
-        // await cardService.updateCard(editingId, formData);
         await updateCard(editingId, formData);
         toast.success('卡片已更新');
       } else {
-        // await cardService.createCard(formData);
         await addCard(formData);
         toast.success('新卡片添加成功');
       }
@@ -157,7 +128,7 @@ export const CardManagement = () => {
 
   const handleRefresh = async () => {
     try {
-      await useCardStore.sync();
+      await sync();
 
       await fetchCards({
         cardNumber: searchCardNumber.trim() || undefined,
