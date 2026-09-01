@@ -12,17 +12,7 @@ export const AuthLayout = () => {
 
   // 1. 页面挂载或刷新时，尝试静默获取用户信息
   useEffect(() => {
-    let cancelled = false;
-
-    const initializeAuthentication = async () => {
-      await fetchUser();
-      if (cancelled) return;
-    };
-    void initializeAuthentication();
-
-    return () => {
-      cancelled = true;
-    }
+    void fetchUser();
   }, [fetchUser]);
 
   // 2. 拦截未登录用户

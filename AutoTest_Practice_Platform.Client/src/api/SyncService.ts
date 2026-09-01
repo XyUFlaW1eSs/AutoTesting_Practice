@@ -15,18 +15,38 @@ const toDbCard = (card: CardResponse): DbCard => ({
   updatedAt: card.updatedAt,
 });
 
+let syncPromise: Promise<void> | null = null;
+
 export const syncService = {
-    /**
-   * 执行待同步 Queue，并在成功同步后使用服务器数据与本地未同步数据合并。
+  /**
+   * 执行单实例同步，重复调用时复用当前正在执行的同步任务。
    */
   async sync(): Promise<void> {
+    if (syncPromise) {
+      return syncPromise;
+    }
+
+    syncPromise = this.executeSync();
+
+    try {
+      await syncPromise;
+    } finally {
+      syncPromise = null;
+    }
+  },
+
+  /**
+   * 执行待同步 Queue，并在成功同步后使用服务器数据与本地未同步数据合并。
+   */
+  async executeSync(): Promise<void> {
     const queue = await syncQueueRepository.getAll();
 
     for (const item of queue) {
       try {
         await this.processQueueItem(item);
-        if(item.id != undefined){
-          await syncQueueRepository.remove(item.id)
+
+        if (item.id !== undefined) {
+          await syncQueueRepository.remove(item.id);
         }
       } catch (error) {
         console.error(`Failed to sync queue item ${item.id}:`, error);
@@ -49,6 +69,7 @@ export const syncService = {
         isDeleted: item.payload!.isDeleted,
         createdAt: item.payload!.createdAt,
       };
+
       await cardService.createCard(payload);
       return;
     }
@@ -62,6 +83,7 @@ export const syncService = {
         createdAt: item.payload!.createdAt,
         updatedAt: item.payload!.updatedAt,
       };
+
       await cardService.updateCard(item.entityId, payload);
       return;
     }
@@ -70,9 +92,13 @@ export const syncService = {
       try {
         await cardService.deleteCard(item.entityId);
       } catch (error: any) {
-        if (error?.response?.status === 404) return;
+        if (error?.response?.status === 404) {
+          return;
+        }
+
         throw error;
       }
+
       return;
     }
 

@@ -46,6 +46,7 @@ interface CardStore {
   updateCard: (id: string, changes: UpdateCardRequest,) => Promise<void>;
   deleteCard: (id: string,) => Promise<void>;
   sync: () => Promise<void>;
+  syncInBackground: () => void;
 }
 
 
@@ -109,7 +110,8 @@ export const useCardStore = create<CardStore>((set, get) => ({
       payload: newCard,
     });
 
-    await get().sync();
+    await get().fetchCards();
+    get().syncInBackground();
   },
 
   updateCard: async (id: string, changes: UpdateCardRequest) => {
@@ -141,19 +143,29 @@ export const useCardStore = create<CardStore>((set, get) => ({
       payload: updateCard,
     });
 
-    await get().sync();
+    await get().fetchCards();
+    get().syncInBackground();
   },
 
   deleteCard: async (id) => {
     await cardRepository.delete(id);
     await syncQueueRepository.upsertCardDelete(id);
 
-    await get().sync();
+    await get().fetchCards();
+    get().syncInBackground();
   },
 
   sync: async () => {
     await syncService.sync();
     await get().fetchCards();
+  },
+  /**
+   * 后台尝试同步，不阻塞当前 CRUD 操作，也不向页面传播同步异常。
+   */
+  syncInBackground: () => {
+    void syncService.sync().catch(error => {
+      console.error('Background sync failed:', error);
+    });
   },
 })
 );

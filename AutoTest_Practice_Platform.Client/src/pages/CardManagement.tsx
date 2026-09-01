@@ -191,7 +191,7 @@ export const CardManagement = () => {
           <Button onClick={handleFetchCards} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Search className="w-4 h-4 mr-2" /> 检索</Button>
           <Button onClick={handleReset} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 重置</Button>
           <Button onClick={handleRefresh} variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"><RotateCcw className="w-4 h-4 mr-2" /> 同步</Button>
-          <Label className="text-zinc-400 text-sm ml-auto">共 {cards.length} 张卡片</Label>
+          <Label className="text-zinc-400 text-sm ml-auto">共 {cards.length} 张卡片 || 剩余可用卡片 : {cards.filter(c => !c.isDeleted).length} 张</Label>
         </div>
 
         {/* 数据表格 */}
