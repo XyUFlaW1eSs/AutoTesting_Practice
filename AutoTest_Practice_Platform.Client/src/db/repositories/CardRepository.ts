@@ -1,6 +1,7 @@
 import type { CardQuery, } from '../../api/types';
 import { db } from '../database';
 import type { DbCard, } from '../models';
+import { getChinaNow } from '@/utils/dateTime';
 
 export const cardRepository = {
 
@@ -60,7 +61,7 @@ export const cardRepository = {
       id,
       {
         isDeleted: true,
-        updatedAt: new Date().toISOString(),
+        updatedAt: getChinaNow(),
       },
     );
   },

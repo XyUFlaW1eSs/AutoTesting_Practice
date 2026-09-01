@@ -5,6 +5,7 @@ import type { CardQuery, CardResponse, CreateCardRequest, UpdateCardRequest, } f
 import { cardRepository } from '@/db/repositories/CardRepository';
 import { syncQueueRepository } from '@/db/repositories/SyncQueueRepository';
 import type { DbCard } from '@/db/models';
+import { getChinaNow } from '@/utils/dateTime';
 
 function toDbCard(card: CardResponse): DbCard {
   return {
@@ -87,7 +88,7 @@ export const useCardStore = create<CardStore>((set, get) => ({
 
   addCard: async (card: CreateCardRequest) => {
 
-    const now = new Date().toISOString();
+    const now = getChinaNow();
     const id = crypto.randomUUID();
 
     const newCard: DbCard = {
@@ -122,7 +123,7 @@ export const useCardStore = create<CardStore>((set, get) => ({
       throw new Error(`Card not found`);
     }
 
-    const updatedAt = new Date().toISOString();
+    const updatedAt = getChinaNow();
 
     await cardRepository.update(id, {
       ...changes,
@@ -139,7 +140,7 @@ export const useCardStore = create<CardStore>((set, get) => ({
       entity: 'card',
       entityId: id,
       operation: 'update',
-      createdAt: new Date().toISOString(),
+      createdAt: getChinaNow(),
       payload: updateCard,
     });
 

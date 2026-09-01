@@ -1,5 +1,6 @@
 import { db } from '../database';
 import type { SyncQueueItem } from '../syncModels';
+import { getChinaNow } from '@/utils/dateTime';
 
 const CARD_ENTITY = 'card';
 
@@ -113,7 +114,7 @@ export const syncQueueRepository = {
       return;
     }
 
-    const now = new Date().toISOString();
+    const now = getChinaNow();
 
     const deleteItem: Omit<SyncQueueItem, 'id'> = {
       entity: CARD_ENTITY,
