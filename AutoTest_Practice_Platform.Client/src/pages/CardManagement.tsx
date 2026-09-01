@@ -256,7 +256,7 @@ export const CardManagement = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label className="text-zinc-300">卡号 (Card Number)</Label>
-                <Input value={formData.cardNumber} onChange={e => setFormData({ ...formData, cardNumber: e.target.value })} className="bg-zinc-800 border-zinc-700 text-zinc-100" />
+                <Input autoComplete="off" value={formData.cardNumber} onChange={e => setFormData({ ...formData, cardNumber: e.target.value })} className="bg-zinc-800 border-zinc-700 text-zinc-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

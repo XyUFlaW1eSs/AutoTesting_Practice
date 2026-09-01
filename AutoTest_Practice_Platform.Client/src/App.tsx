@@ -8,7 +8,7 @@ function App() {
     <>
       <RouterProvider router={router} />
       {/* 挂载全局弹窗，配置为暗黑主题优先 */}
-      <Toaster theme="dark" position="top-center" />
+      <Toaster theme="dark" position="top-center" duration={3000} />
     </>
   );
 }
