@@ -30,8 +30,10 @@ namespace AutoTest_Practice_Platform.API.Contracts
                     card.Ccv,
                     formattedInfo,
                     card.IsDeleted,
-                    card.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss.ss"),
-                    card.UpdatedAt.HasValue ? card.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss.ss") : null
+                    card.CreatedAt.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                    card.UpdatedAt.HasValue
+                        ? card.UpdatedAt.Value.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss.fff")
+                        : null
                 );
             }
         }

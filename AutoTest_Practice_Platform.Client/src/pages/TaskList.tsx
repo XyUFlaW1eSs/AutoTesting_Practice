@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 // 借用 shadcn 默认提供的类名合并工具 (确保你的项目中路径正确，通常在 lib/utils 里)
 import { cn } from '../lib/utils';
 import { TimePicker } from '../components/ui/TimePicker';
-import { getChinaNow } from '@/utils/dateTime';
+import { getChinaNow, formatDateTime } from '@/utils/dateTime';
 
 export const TaskList = () => {
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
@@ -200,7 +200,7 @@ export const TaskList = () => {
         description: formData.description,
         status: Number(formData.status) as WorkTaskStatus,
         priority: Number(formData.priority) as TaskPriority,
-        dueDate: formData.dueDate ? formData.dueDate.toISOString() : getChinaNow(),
+        dueDate: formData.dueDate ? formatDateTime(formData.dueDate) : getChinaNow(),
       };
 
       if (editingId) {

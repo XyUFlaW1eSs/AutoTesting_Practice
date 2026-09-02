@@ -221,9 +221,8 @@ export const CardManagement = () => {
                       <span className={card.isDeleted ? 'line-through text-zinc-500' : ''}>{card.cardNumber}</span>
                     </TableCell>
                     <TableCell className="text-zinc-300">{card.expiryDate}</TableCell>
-                    <TableCell className="text-zinc-300">***</TableCell> {/* 列表中对 CCV 进行脱敏展示 */}
+                    <TableCell className="text-zinc-300">{card.ccv}</TableCell>
                     <TableCell>
-                      {/* 列表中的只读滑块状态 */}
                       <div className="flex items-center gap-2">
                         <Switch checked={card.isDeleted} disabled={true} />
                         <span className={`text-xs ${card.isDeleted ? 'text-red-400' : 'text-green-400'}`}>{card.isDeleted ? '已废弃' : '活跃'}</span>
@@ -261,11 +260,11 @@ export const CardManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-zinc-300">有效期 (MM/YY)</Label>
-                  <Input value={formData.expiryDate} onChange={e => setFormData({ ...formData, expiryDate: e.target.value })} placeholder="12/26" className="bg-zinc-800 border-zinc-700 text-zinc-100" />
+                  <Input autoComplete="off"  value={formData.expiryDate} onChange={e => setFormData({ ...formData, expiryDate: e.target.value })} placeholder="12/26" className="bg-zinc-800 border-zinc-700 text-zinc-100" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-zinc-300">CCV</Label>
-                  <Input value={formData.ccv} onChange={e => setFormData({ ...formData, ccv: e.target.value })} maxLength={4} className="bg-zinc-800 border-zinc-700 text-zinc-100" />
+                  <Input autoComplete="off" value={formData.ccv} onChange={e => setFormData({ ...formData, ccv: e.target.value })} maxLength={4} className="bg-zinc-800 border-zinc-700 text-zinc-100" />
                 </div>
               </div>
               <div className="flex items-center justify-between p-3 border border-zinc-700 rounded-md mt-2">
