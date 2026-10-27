@@ -3,6 +3,7 @@ $ErrorActionPreference="Stop"
 $root=Split-Path -Parent $PSScriptRoot
 $artifacts=Join-Path $root "artifacts"
 $stage=Join-Path $artifacts "insurance-lab"
+if(Test-Path $stage){Remove-Item $stage -Recurse -Force}
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Push-Location (Join-Path $root "backend/Insurance.Api")
 try { dotnet publish -c $Configuration -o (Join-Path $stage "backend") } finally { Pop-Location }
