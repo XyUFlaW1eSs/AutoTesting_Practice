@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+TestResults/
+artifacts/
+playwright-report/
+test-results/
