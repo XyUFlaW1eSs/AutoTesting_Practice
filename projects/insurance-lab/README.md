@@ -30,7 +30,7 @@
 3. 前端：另开终端运行 `scripts/run-frontend.ps1`。
 4. API 文档：打开 `http://localhost:5080/swagger`。
 5. 前端：打开 `http://localhost:5173`。
-6. API 测试：`scripts/run-api-tests.ps1`。
+6. API 测试：`scripts/run-api-tests.ps1`。\n7. Jira 缺陷模板与路线：`docs/JIRA-DEFECT-TEMPLATES.md`、`docs/JIRA-LEARNING-ROADMAP.md`。
 
 ## 环境
 - Development: 本机热重载，连接本地 PostgreSQL。
@@ -50,3 +50,4 @@
 - 数据库初始化脚本适用于全新学习库；不要在有价值的数据上直接执行 DROP。
 - 基础版本不包含真实登录系统，查询接口不做生产级用户隔离。
 - 业务状态和保费规则仅为练习规则，需通过需求追踪矩阵验证。
+\n## 重要文档\n- [需求规格与验收标准](docs/REQUIREMENTS.md)\n- [测试策略与风险矩阵](docs/TEST-STRATEGY.md)\n- [环境隔离](docs/ENVIRONMENTS.md)\n- [发布检查表](docs/RELEASE-CHECKLIST.md)\n- [Jira 缺陷报告模板](docs/JIRA-DEFECT-TEMPLATES.md)\n- [Jira 学习路线](docs/JIRA-LEARNING-ROADMAP.md)\n
