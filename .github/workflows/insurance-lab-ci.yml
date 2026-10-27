@@ -1,0 +1,79 @@
+name: Insurance Lab CI
+
+on:
+  push:
+    paths:
+      - 'projects/insurance-lab/**'
+      - '.github/workflows/insurance-lab-ci.yml'
+  pull_request:
+    paths:
+      - 'projects/insurance-lab/**'
+      - '.github/workflows/insurance-lab-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: insurance_lab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d insurance_lab"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: projects/insurance-lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Initialize schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d insurance_lab -f database/001-init.sql
+      - name: Build API
+        run: dotnet build backend/Insurance.Api/Insurance.Api.csproj --configuration Release
+      - name: Build frontend
+        working-directory: projects/insurance-lab/frontend
+        run: npm install && npm run build
+      - name: Install API test dependencies
+        run: python -m pip install -r tests/api/requirements.txt
+      - name: Start API
+        env:
+          ConnectionStrings__InsuranceDb: Host=localhost;Port=5432;Database=insurance_lab;Username=postgres;Password=postgres
+          ASPNETCORE_ENVIRONMENT: Development
+          FrontendOrigin: http://localhost:5173
+        run: |
+          nohup dotnet run --project backend/Insurance.Api/Insurance.Api.csproj --urls http://localhost:5080 > /tmp/insurance-api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --fail http://localhost:5080/health; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/insurance-api.log
+          exit 1
+      - name: Run API regression
+        env:
+          INSURANCE_API_BASE_URL: http://localhost:5080
+        run: mkdir -p artifacts && python -m pytest tests/api -v --junitxml=artifacts/junit.xml
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insurance-lab-junit
+          path: projects/insurance-lab/artifacts/junit.xml
+          if-no-files-found: ignore
