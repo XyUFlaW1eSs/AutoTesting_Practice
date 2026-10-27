@@ -112,3 +112,22 @@ def test_cannot_underwrite_twice():
     second = requests.post(f"{BASE_URL}/api/applications/{application_id}/underwrite", json={"approve": False, "note": ""}, timeout=TIMEOUT)
     assert first.status_code == 200
     assert second.status_code == 409
+
+def test_repeated_payment_with_same_idempotency_key_is_safe():
+    created = create_application()
+    assert created.status_code == 201, created.text
+    app_id = created.json()["id"]
+    underwrite = requests.post(f"{BASE_URL}/api/applications/{app_id}/underwrite",
+        json={"approve": True, "note": "idempotency test"}, timeout=TIMEOUT)
+    assert underwrite.status_code == 200
+    key = unique_key("same-key")
+    first = requests.post(f"{BASE_URL}/api/applications/{app_id}/pay",
+        json={"idempotencyKey": key}, timeout=TIMEOUT)
+    second = requests.post(f"{BASE_URL}/api/applications/{app_id}/pay",
+        json={"idempotencyKey": key}, timeout=TIMEOUT)
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert second.json()["duplicate"] is True
+    assert first.json()["policyNumber"] == second.json()["policyNumber"]
+    policies = requests.get(f"{BASE_URL}/api/policies", timeout=TIMEOUT)
+    assert len([p for p in policies.json() if p["applicationId"] == app_id]) == 1
