@@ -68,18 +68,18 @@ app.MapPost("/api/applications/{id:long}/pay", async (long id, PayRequest reques
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     var item = await db.Applications.SingleOrDefaultAsync(x => x.Id == id, ct);
     if (item is null) return Results.NotFound(new { message = "申请不存在。" });
-    if (item.Status != ApplicationStatuses.Approved)
-        return Results.Conflict(new { message = "只有核保通过的申请才能支付。" });
-    if (await db.Policies.AnyAsync(x => x.ApplicationId == id, ct))
-        return Results.Conflict(new { message = "该申请已生成保单。" });
-
     var key = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? $"application-{id}-payment" : request.IdempotencyKey.Trim();
     var existing = await db.Payments.SingleOrDefaultAsync(x => x.IdempotencyKey == key, ct);
     if (existing is not null)
     {
         if (existing.ApplicationId != id) return Results.Conflict(new { message = "幂等键已用于其他申请。" });
-        return Results.Ok(new { applicationId = id, paymentId = existing.Id, paymentStatus = existing.Status, duplicate = true });
+        var existingPolicy = await db.Policies.SingleOrDefaultAsync(x => x.ApplicationId == id, ct);
+        return Results.Ok(new { applicationId = id, paymentId = existing.Id, paymentStatus = existing.Status, policyNumber = existingPolicy?.PolicyNumber, policyStatus = existingPolicy?.Status, duplicate = true });
     }
+    if (item.Status != ApplicationStatuses.Approved)
+        return Results.Conflict(new { message = "只有核保通过的申请才能支付。" });
+    if (await db.Policies.AnyAsync(x => x.ApplicationId == id, ct))
+        return Results.Conflict(new { message = "该申请已生成保单。" });
 
     var payment = new Payment { ApplicationId = id, Amount = item.Premium, Status = "Succeeded", IdempotencyKey = key };
     var policy = new Policy { ApplicationId = id, PolicyNumber = $"LAB-{id:D8}", Status = "Active" };
