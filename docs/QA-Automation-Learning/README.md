@@ -3,6 +3,7 @@
 面向功能测试、手工测试、自动化测试与 UAT 全流程验收岗位。保险业务均为虚构练习规则，不代表真实保险产品或真实企业项目。
 
 ## 学习入口
+0. [保险综合实战全栈项目](../../projects/insurance-lab/README.md)：Vue 3 + ASP.NET Core + PostgreSQL + pytest + Jira。
 1. [完整课程地图与阶段验收](01-学习路线/完整课程地图与阶段验收.md)：全路线、阶段交付物和完成标准。
 2. [学习计划总览](01-学习路线/学习计划总览.md)：首轮六周计划。
 3. [岗位 JD 与成果映射](01-学习路线/岗位JD与学习成果映射.md)：学习成果如何转化为求职材料。
@@ -10,6 +11,7 @@
 5. [自动化测试课程](03-自动化测试/README.md)：Python、pytest、API、数据库、Selenium、Playwright、工程化。
 6. [保险业务综合实战](04-保险业务综合实战/README.md)：贯穿全课程的练习项目。
 7. [Git 与 CI/CD](05-Git与CI-CD/README.md)：版本控制与自动化质量门禁。
+8. [Jira 缺陷管理学习路线](../../projects/insurance-lab/docs/JIRA-LEARNING-ROADMAP.md)：从缺陷报告到复测关闭。
 
 ## 推荐学习顺序
 先学习测试基础和测试设计，再完成完整缺陷报告、测试总结和 UAT；随后学习 Python 与 pytest，再学习 HTTP/requests、SQL、API 集成测试、Selenium/Playwright，最后完成框架与 CI/CD。若求职时间有限，优先掌握测试设计、缺陷管理、SQL、HTTP/API、Python、pytest、Git。
