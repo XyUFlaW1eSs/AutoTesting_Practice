@@ -1,3 +1,4 @@
+using Insurance.Api;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
