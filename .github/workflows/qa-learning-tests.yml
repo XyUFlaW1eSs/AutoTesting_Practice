@@ -1,0 +1,37 @@
+name: QA Learning Examples
+
+on:
+  push:
+    paths:
+      - 'tests/learning_examples/**'
+      - '.github/workflows/qa-learning-tests.yml'
+  pull_request:
+    paths:
+      - 'tests/learning_examples/**'
+      - '.github/workflows/qa-learning-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependency
+        run: python -m pip install --upgrade pip pytest
+      - name: Run isolated learning tests
+        run: python -m pytest tests/learning_examples -q --junitxml=pytest-report.xml
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-learning-pytest-report
+          path: pytest-report.xml
+          if-no-files-found: ignore
