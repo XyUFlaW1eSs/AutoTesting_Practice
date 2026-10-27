@@ -87,9 +87,24 @@ app.MapPost("/api/applications/{id:long}/pay", async (long id, PayRequest reques
     item.UpdatedAt = DateTimeOffset.UtcNow;
     db.Payments.Add(payment);
     db.Policies.Add(policy);
-    await db.SaveChangesAsync(ct);
-    await tx.CommitAsync(ct);
-    return Results.Ok(new { applicationId = id, paymentId = payment.Id, paymentStatus = payment.Status, policyNumber = policy.PolicyNumber, policyStatus = policy.Status, duplicate = false });
+    try
+    {
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return Results.Ok(new { applicationId = id, paymentId = payment.Id, paymentStatus = payment.Status, policyNumber = policy.PolicyNumber, policyStatus = policy.Status, duplicate = false });
+    }
+    catch (DbUpdateException)
+    {
+        await tx.RollbackAsync(ct);
+        // A concurrent retry may have committed first. Return its result only when the same key belongs to this application.
+        var committedPayment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(x => x.IdempotencyKey == key, ct);
+        if (committedPayment is not null && committedPayment.ApplicationId == id)
+        {
+            var committedPolicy = await db.Policies.AsNoTracking().SingleOrDefaultAsync(x => x.ApplicationId == id, ct);
+            return Results.Ok(new { applicationId = id, paymentId = committedPayment.Id, paymentStatus = committedPayment.Status, policyNumber = committedPolicy?.PolicyNumber, policyStatus = committedPolicy?.Status, duplicate = true });
+        }
+        return Results.Conflict(new { message = "支付请求发生并发冲突，请查询当前申请状态后重试。" });
+    }
 }).WithTags("Payments");
 
 app.MapGet("/api/policies", async (InsuranceDbContext db, CancellationToken ct) =>
