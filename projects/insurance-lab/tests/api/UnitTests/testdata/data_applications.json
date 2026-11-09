@@ -1,0 +1,26 @@
+{
+  "UT-APP-001" : {
+    "applicantName": "UT-APP-001",
+    "age": 20,
+    "productCode": "LIFE-BASIC",
+    "premium" : 1100
+  },
+  "UT-APP-002-01" : {
+    "applicantName": null,
+    "age": 21,
+    "productCode": "LIFE-BASIC",
+    "premium" : 1200
+  },
+  "UT-APP-002-02" : {
+    "applicantName": "",
+    "age": 22,
+    "productCode": "LIFE-BASIC",
+    "premium" : 1300
+  },
+  "UT-APP-002-03" : {
+    "applicantName": "     ",
+    "age": 23,
+    "productCode": "LIFE-BASIC",
+    "premium" : 1400
+  }
+}
