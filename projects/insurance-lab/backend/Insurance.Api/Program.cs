@@ -10,7 +10,7 @@ builder.Services.AddDbContext<InsuranceDbContext>(options => options.UseNpgsql(c
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
-    policy.WithOrigins(builder.Configuration["FrontendOrigin"] ?? "http://localhost:5173")
+    policy.WithOrigins(builder.Configuration["FrontendOrigin"] ?? "http://localhost:6173")
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
