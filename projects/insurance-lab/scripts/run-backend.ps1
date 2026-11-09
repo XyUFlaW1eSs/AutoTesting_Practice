@@ -17,9 +17,15 @@ try {
     try {
         Write-Host "Environment: Development"
         Write-Host "Project: $project"
-        Write-Host "Starting Insurance API at http://localhost:5080 ..."
 
-        dotnet run --project $project --urls "http://localhost:5080"
+        Write-Host "Building Insurance API..."
+        dotnet build $project --configuration Debug
+        if ($LASTEXITCODE -ne 0) {
+            throw "Insurance API build failed with exit code $LASTEXITCODE. Startup cancelled."
+        }
+
+        Write-Host "Build succeeded. Starting Insurance API at http://localhost:5080 ..."
+        dotnet run --no-build --project $project --configuration Debug --urls "http://localhost:5080"
         if ($LASTEXITCODE -ne 0) {
             throw "Insurance API exited with code $LASTEXITCODE."
         }
